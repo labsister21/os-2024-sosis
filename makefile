@@ -27,8 +27,8 @@ clean:
 
 
 kernel:
-	@$(ASM) $(AFLAGS) src/kernel_loader.s -o bin/kernel_loader.o
-	@$(CC) $(CFLAGS) src/*.c -o bin/kernel.o
+	@$(ASM) $(AFLAGS) $(SOURCE_FOLDER)/kernel_loader.s -o bin/kernel_loader.o
+	@$(CC) $(CFLAGS) $(SOURCE_FOLDER)/*.c -o bin/kernel.o
 	@$(LIN) $(LFLAGS) bin/*.o -o $(OUTPUT_FOLDER)/kernel
 	@echo Linking object files and generating elf32...
 	@rm -f *.o
@@ -38,7 +38,7 @@ iso: kernel
 	@cp $(OUTPUT_FOLDER)/kernel     $(OUTPUT_FOLDER)/iso/boot/
 	@cp other/grub1                 $(OUTPUT_FOLDER)/iso/boot/grub/
 	@cp $(SOURCE_FOLDER)/menu.lst   $(OUTPUT_FOLDER)/iso/boot/grub/
-	@grub-mkrescue -o $(OUTPUT_FOLDER)/os.iso $(OUTPUT_FOLDER)/iso
+	@grub-mkrescue -o $(OUTPUT_FOLDER)/$(ISO_NAME).iso $(OUTPUT_FOLDER)/iso
 	@echo Creating ISO image...
 	@rm -r $(OUTPUT_FOLDER)/iso/
 
