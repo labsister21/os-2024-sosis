@@ -41,4 +41,14 @@ iso: kernel
 	@grub-mkrescue -o $(OUTPUT_FOLDER)/$(ISO_NAME).iso $(OUTPUT_FOLDER)/iso
 	@echo Creating ISO image...
 	@rm -r $(OUTPUT_FOLDER)/iso/
+	genisoimage -R                   \
+		-b boot/grub/grub1         \
+		-no-emul-boot              \
+		-boot-load-size 4          \
+		-A os                      \
+		-input-charset utf8        \
+		-quiet                     \
+		-boot-info-table           \
+		-o OS2024.iso              \
+		iso
 
