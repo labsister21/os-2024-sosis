@@ -60,3 +60,4 @@ struct GDTR _gdt_gdtr = {
     //        Use sizeof operator
     sizeof(global_descriptor_table) - 1,
     &global_descriptor_table};
+
