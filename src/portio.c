@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "header/cpu/portio.h"
+#include "header/stdtype.h"
 
 /** x86 inb/outb:
  * @param dx target port 
@@ -22,13 +23,13 @@ void out(uint16_t port, uint8_t data) {
     // volatile -> menandakan bahwa kode assembly memiliki efek dimana akan melakukan writing pada I/O port supaya compiler tidak mengoptimasi kode assembly tersebut
 }
 
-// void out16(uint16_t port, uint16_t data) {
-//     __asm__ volatile(
-//         "outw %0, %1"
-//         : // <Empty output operand>
-//         : "a"(data), "Nd"(port)
-//     );
-// }
+void out16(uint16_t port, uint16_t data) {
+    __asm__ volatile(
+        "outw %0, %1"
+        : // <Empty output operand>
+        : "a"(data), "Nd"(port)
+    );
+}
 
 uint8_t in(uint16_t port) {
     uint8_t result;
@@ -40,12 +41,12 @@ uint8_t in(uint16_t port) {
     return result;
 }
 
-// uint16_t in16(uint16_t port) {
-//     uint16_t result;
-//     __asm__ volatile(
-//         "inw %1, %0" 
-//         : "=a"(result) 
-//         : "Nd"(port)
-//     );
-//     return result;
-// }
+uint16_t in16(uint16_t port) {
+    uint16_t result;
+    __asm__ volatile(
+        "inw %1, %0" 
+        : "=a"(result) 
+        : "Nd"(port)
+    );
+    return result;
+}

@@ -5,6 +5,7 @@
 #include "header/stdlib/string.h"
 #include "header/cpu/portio.h"
 #include "header/stdmem.h"
+#include "header/stdtype.h"
 
 void framebuffer_set_cursor(uint8_t r, uint8_t c) {
     /*
@@ -29,13 +30,14 @@ void framebuffer_write(uint8_t row, uint8_t col, char c, uint8_t fg, uint8_t bg)
             bg = warna background
     F.S. Menulis karakter c ke framebuffer dengan warna fg dan warna background bg
     */
-    size_t i = (row * 80 + col) * 2;
-    // uint16_t pos = row * 80 + col; // Menghitung posisi karakter c
-    uint8_t color = (bg << 4) | (fg & 0X0F); // Memberi warna dan warna background pada karakter c
-    /* uint16_t *fb = (uint16_t *) FRAMEBUFFER_MEMORY_OFFSET; // Mengambil alamat memory framebuffer
-    fb[pos] = (color << 8) | c; // Menulis karakter c ke framebuffer dengan warna color (shift informasi color ke HIGH BYTE) */
-    FRAMEBUFFER_MEMORY_OFFSET[i] = c;
-    FRAMEBUFFER_MEMORY_OFFSET[i + 1] = color;
+    uint16_t pos = row * 80 + col; // Menghitung posisi karakter c
+    uint8_t color = (bg << 4) | fg ; // Memberi warna dan warna background pada karakter c
+    uint16_t *fb = (uint16_t *) FRAMEBUFFER_MEMORY_OFFSET; // Mengambil alamat memory framebuffer
+    fb[pos] = (color << 8) | c; // Menulis karakter c ke framebuffer dengan warna color (shift informasi color ke HIGH BYTE)
+    // size_t i = (row * 80 + col) * 2;
+    // uint8_t color = (bg << 4) | (fg & 0X0F); // Memberi warna dan warna background pada karakter c
+    // FRAMEBUFFER_MEMORY_OFFSET[i] = c;
+    // FRAMEBUFFER_MEMORY_OFFSET[i + 1] = color;
 }
 
 void framebuffer_clear(void) {
@@ -43,11 +45,11 @@ void framebuffer_clear(void) {
     I.S. -
     F.S. Menghapus semua karakter yang ada di framebuffer
     */
-    memset(FRAMEBUFFER_MEMORY_OFFSET, 0X00, 80 * 25 * 2);
-    /* uint16_t *fb = (uint16_t *) FRAMEBUFFER_MEMORY_OFFSET; // Mengambil alamat memory framebuffer */
+    // memset(FRAMEBUFFER_MEMORY_OFFSET, 0X00, 80 * 25 * 2);
+    uint16_t *fb = (uint16_t *) FRAMEBUFFER_MEMORY_OFFSET; // Mengambil alamat memory framebuffer
     // Looping untuk menghapus semua karakter yang ada di framebuffer
-    for (uint16_t i = 0; i < 80 * 25 * 2; i++) {
-        // FRAMEBUFFER_MEMORY_OFFSET[i + 1] = (0x07 << 8) | 0x00;
-        FRAMEBUFFER_MEMORY_OFFSET[i + 1] = 0x07;
+    for (uint16_t i = 0; i < 80 * 25; i++) {
+        fb[i + 1] = (0x07 << 8) | 0x00;
+        // fb[i + 1] = 0x07;
     }
 }
