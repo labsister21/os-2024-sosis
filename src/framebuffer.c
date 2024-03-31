@@ -16,10 +16,10 @@ void framebuffer_write(uint8_t row, uint8_t col, char c, uint8_t fg, uint8_t bg)
             bg = warna background
     F.S. Menulis karakter c ke framebuffer dengan warna fg dan warna background bg
     */
-    size_t loc = (row * 80 + col); // Menghitung posisi karakter c
-    uint16_t color = (bg << 4) | (fg & 0X0F); // Memberi warna dan warna background pada karakter c
-    uint16_t* fbmo = (uint16_t*) FRAMEBUFFER_MEMORY_OFFSET;
-    fbmo[loc] = c | (color << 8);
+    size_t loc = (row * 80 + col) * 2; // Menghitung posisi karakter c
+    uint8_t color = (bg << 4) | (fg & 0X0F); // Memberi warna dan warna background pada karakter c
+    FRAMEBUFFER_MEMORY_OFFSET[loc] = c;
+    FRAMEBUFFER_MEMORY_OFFSET[loc + 1] = color;
 }
 
 
@@ -44,7 +44,7 @@ void framebuffer_clear(void) {
     I.S. -
     F.S. Menghapus semua karakter yang ada di framebuffer
     */
-    memset(FRAMEBUFFER_MEMORY_OFFSET, 0, 2000);
+    memset(FRAMEBUFFER_MEMORY_OFFSET, 0X00, 80 * 25 * 2);
 }
 //     uint16_t *fb = (uint16_t *) FRAMEBUFFER_MEMORY_OFFSET; // Mengambil alamat memory framebuffer
 //     // // Looping untuk menghapus semua karakter yang ada di framebuffer
