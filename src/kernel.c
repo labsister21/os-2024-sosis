@@ -5,6 +5,7 @@
 #include "header/driver/framebuffer.h"
 #include "header/cpu/interrupt.h"
 #include "header/cpu/idt.h"
+#include "header/driver/keyboard.h"
 
 
 // Test Milestone 0
@@ -14,12 +15,10 @@
 //     __asm__("mov $0xCAFE0000, %0" : "=r"(a));
 //     while (true) b += 1;
 // }
-
 // void kernel_setup(void) {
 //     load_gdt(&_gdt_gdtr);
 //     while (true);
 // }
-
 
 
 // Test Framebuffer
@@ -33,6 +32,7 @@
 //     while (true);
 // }
 
+
 // Test Interrupt
 // void kernel_setup(void) {
 //     load_gdt(&_gdt_gdtr);
@@ -43,6 +43,7 @@
 //     __asm__("int $0x4");
 //     while (true);
 // }
+
 
 // Test Keyboard
 void kernel_setup(void) {
