@@ -72,6 +72,9 @@ void get_keyboard_buffer(char *buf){
     keyboard_state.keyboard_buffer = '\0';
 }
 
+
+uint8_t col = 0;
+uint8_t row = 0;
 /* -- Keyboard Interrupt Service Routine -- */
 
 /**
@@ -90,6 +93,26 @@ void keyboard_isr(void){
             keyboard_state.read_extended_mode = false;
         }
         char ascii_char = keyboard_scancode_1_to_ascii_map[scancode];
+        if (ascii_char == '\n') {   /* Enter */
+            row ++;
+            col = 0;
+        } 
+        else if (ascii_char == '\t') { /* Tab */
+            for(int i=0;i<8;i++){
+                framebuffer_write(row,col++,' ',0xF,0);
+            }
+        }
+        else if (ascii_char == '\b') { /* Backspace */
+            framebuffer_write(row,col-1,' ',0xF,0);
+            col--;
+        }
+        else{
+            framebuffer_write(row, col++, ascii_char, 0xF, 0);
         keyboard_state.keyboard_buffer = ascii_char;
+        framebuffer_write(row,col,' ',0xF,0);
+        framebuffer_set_cursor(row,col);
+        }
     }
 }
+
+
