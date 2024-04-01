@@ -44,6 +44,7 @@ void main_interrupt_handler(struct InterruptFrame frame) {
             keyboard_isr();
             break;
     }
+    pic_ack(frame.int_number);
 }
 
 void activate_keyboard_interrupt(void) {
