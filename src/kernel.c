@@ -6,6 +6,7 @@
 #include "header/cpu/interrupt.h"
 #include "header/cpu/idt.h"
 #include "header/driver/keyboard.h"
+#include "header/driver/disk.h"
 
 
 void kernel_setup(void) {
@@ -23,6 +24,11 @@ void kernel_setup(void) {
          get_keyboard_buffer(&c);
          if (c) framebuffer_write(0, col++, c, 0xF, 0);
     }
+
+    struct BlockBuffer b;
+    for (int i = 0; i < 512; i++) b.buf[i] = i % 16;
+    write_blocks(&b, 17, 1);
+    while (true);
 }
 
 // void kernel_setup(void) {
