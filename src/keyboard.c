@@ -91,5 +91,4 @@ void keyboard_isr(void){
         char ascii_char = keyboard_scancode_1_to_ascii_map[scancode];
         keyboard_state.keyboard_buffer = ascii_char;
     }
-    pic_ack(IRQ_KEYBOARD);
 }
