@@ -22,6 +22,7 @@ const char keyboard_scancode_1_to_ascii_map[256] = {
       0,    0,   0,   0,   0,   0,   0,   0,    0,   0,   0,    0,    0,   0,    0,    0,
       0,    0,   0,   0,   0,   0,   0,   0,    0,   0,   0,    0,    0,   0,    0,    0,
 };
+
 // #define EXT_SCANCODE_UP        0x48
 // #define EXT_SCANCODE_DOWN      0x50
 // #define EXT_SCANCODE_LEFT      0x4B
