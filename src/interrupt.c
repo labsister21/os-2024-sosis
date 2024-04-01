@@ -43,36 +43,9 @@ void main_interrupt_handler(struct InterruptFrame frame) {
             // keyboard_isr();
             break;
     }
-    // switch (frame.int_number) {
-    //     case IRQ_TIMER:
-    //         // Handle timer interrupt
-    //         break;
-    //     case IRQ_KEYBOARD:
-    //         // Handle keyboard interrupt
-    //         break;
-    //     case IRQ_MOUSE:
-    //         // Handle mouse interrupt
-    //         break;
-    //     // Add cases for other interrupt numbers as needed
-    //     default:
-    //         // No specific handler found, call the generic handler
-    //         if (frame.int_number < ISR_STUB_TABLE_LIMIT && isr_stub_table[frame.int_number] != NULL) {
-    //             void (*handler)(struct InterruptFrame) = isr_stub_table[frame.int_number];
-    //             handler(frame);
-    //         } else {
-    //             // No handler found, print error message
-    //             // You can replace this with your own error handling mechanism
-    //             printf("Error: No handler found for interrupt number %u\n", frame.int_number);
-    //         }
-    //         break;
-    // }
-
-    // Acknowledge the interrupt
-    pic_ack(frame.int_number);
 }
 
 void activate_keyboard_interrupt(void) {
-    // Activate only keyboard interrupt (IRQ_KEYBOARD = 1)
     uint8_t mask = in(PIC1_DATA) & ~(1 << IRQ_KEYBOARD);
     out(PIC1_DATA, mask);
 }
