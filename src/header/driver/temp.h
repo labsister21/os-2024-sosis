@@ -50,6 +50,12 @@ void keyboard_state_deactivate(void);
 // Get keyboard buffer value and flush the buffer - @param buf Pointer to char buffer
 void get_keyboard_buffer(char *buf);
 
+void set_row(uint8_t r);
+
+void set_col(uint8_t c);
+
+void set_terminal_length(uint8_t len);
+
 
 /* -- Keyboard Interrupt Service Routine -- */
 
