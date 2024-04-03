@@ -43,26 +43,42 @@ const char keyboard_scancode_caps_to_ascii_map[256] = {
       0,    0,   0,   0,   0,   0,   0,   0,    0,   0,   0,    0,    0,   0,    0,    0,
 };
 
-// Static variable to hold keyboard driver state
-static struct KeyboardDriverState keyboard_state = {0};
+
+/**
+ * KeyboardDriverState - Contain all driver states
+ * 
+ * @param read_extended_mode Optional, can be used for signaling next read is extended scancode (ex. arrow keys)
+ * @param keyboard_input_on  Indicate whether keyboard ISR is activated or not
+ * @param keyboard_buffer    Storing keyboard input values in ASCII
+ */
+struct KeyboardDriverState keyboard_state = {
+    .read_extended_mode = false,
+    .keyboard_input_on = false,
+    .keyboard_buffer = 0,
+};
+
+
+
 
 /* -- Driver Interfaces -- */
 
 // Activate keyboard ISR / start listen keyboard & save to buffer
-void keyboard_state_activate(void){
+void keyboard_state_activate(void) {
     keyboard_state.keyboard_input_on = true;
 }
 
 // Deactivate keyboard ISR / stop listening keyboard interrupt
-void keyboard_state_deactivate(void){
+void keyboard_state_deactivate(void) {
     keyboard_state.keyboard_input_on = false;
+
 }
 
 // Get keyboard buffer value and flush the buffer - @param buf Pointer to char buffer
-void get_keyboard_buffer(char *buf){
+void get_keyboard_buffer(char *buf) {
     *buf = keyboard_state.keyboard_buffer;
     keyboard_state.keyboard_buffer = '\0';
 }
+
 
 // Define cursor position variables
 static uint8_t cursor_col = 0;
@@ -74,12 +90,12 @@ static uint8_t cursor_row = 0;
  * Handling keyboard interrupt & process scancodes into ASCII character.
  * Will start listen and process keyboard scancode if keyboard_input_on.
  */
-void keyboard_isr(void){
+void keyboard_isr(void) {
     uint8_t scancode = in(KEYBOARD_DATA_PORT);
 
     bool is_break_code = (scancode & 0x80) != 0;
     if (is_break_code) {
-        return; // Ignore break codes
+        return;
     }
 
     if(keyboard_state.keyboard_input_on){
@@ -99,7 +115,7 @@ void keyboard_isr(void){
                 }
                 framebuffer_write(cursor_row, cursor_col, ' ', 0XF, 0);
                 cursor_col++;
-            framebuffer_set_cursor (cursor_row, cursor_col);
+                framebuffer_set_cursor(cursor_row, cursor_col);
             }
         }
         else if (ascii_char == '\b') { // Backspace
