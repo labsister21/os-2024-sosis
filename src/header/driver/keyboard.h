@@ -13,7 +13,10 @@
 
 #define KEYBOARD_DATA_PORT     0x60
 #define EXTENDED_SCANCODE_BYTE 0xE0
-#define CAPSLOCK_SCANCODE 0x3A
+#define CAPSLOCK_SCANCODE      0x3A
+#define LEFT_SHIFT_SCANCODE    0x2A
+#define RIGHT_SHIFT_SCANCODE   0x36
+
 
 /**
  * keyboard_scancode_1_to_ascii_map[256], Convert scancode values that correspond to ASCII printables

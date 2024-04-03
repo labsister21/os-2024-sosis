@@ -2,6 +2,10 @@
 #include "header/driver/framebuffer.h"
 #include "header/cpu/portio.h"
 #include "header/stdlib/string.h"
+
+
+static bool capslock_on = false;
+
 const char keyboard_scancode_1_to_ascii_map[256] = {
       0, 0x1B, '1', '2', '3', '4', '5', '6',  '7', '8', '9',  '0',  '-', '=', '\b', '\t',
     'q',  'w', 'e', 'r', 't', 'y', 'u', 'i',  'o', 'p', '[',  ']', '\n',   0,  'a',  's',
@@ -82,7 +86,7 @@ void get_keyboard_buffer(char *buf) {
 // Define cursor position variables
 static uint8_t cursor_col = 0;
 static uint8_t cursor_row = 0;
-static bool capslock_on = false;
+
 
 /* -- Keyboard Interrupt Service Routine -- */
 
@@ -172,7 +176,7 @@ void keyboard_isr(void) {
             }
         }
         else if (ascii_char == '\b') { // Backspace
-            if (cursor_row > 0 && cursor_col==0) {
+            if (cursor_row > 0 && cursor_col == 0) {
                 cursor_col = 79;
                 cursor_row--;
                 framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
@@ -193,7 +197,7 @@ void keyboard_isr(void) {
             cursor_col++;
             framebuffer_set_cursor(cursor_row, cursor_col);
         }
-        framebuffer_write(cursor_row,cursor_col+1,' ',0xF,0x0);
+        framebuffer_write(cursor_row,cursor_col + 1,' ', 0xF, 0x0);
     } 
     else {
         keyboard_state.keyboard_buffer = '\0';   
