@@ -2,7 +2,6 @@
 #include "header/driver/framebuffer.h"
 #include "header/cpu/portio.h"
 #include "header/stdlib/string.h"
-
 const char keyboard_scancode_1_to_ascii_map[256] = {
       0, 0x1B, '1', '2', '3', '4', '5', '6',  '7', '8', '9',  '0',  '-', '=', '\b', '\t',
     'q',  'w', 'e', 'r', 't', 'y', 'u', 'i',  'o', 'p', '[',  ']', '\n',   0,  'a',  's',
@@ -92,13 +91,40 @@ static uint8_t cursor_row = 0;
  */
 void keyboard_isr(void) {
     uint8_t scancode = in(KEYBOARD_DATA_PORT);
-
-    bool is_break_code = (scancode & 0x80) != 0;
-    if (is_break_code) {
-        return;
-    }
-
     if(keyboard_state.keyboard_input_on){
+        bool is_break_code = (scancode & 0x80) != 0;
+        if (is_break_code) {
+            return;
+        }
+
+        // if(keyboard_state.read_extended_mode){
+            if(scancode==EXT_SCANCODE_UP && cursor_row>0){
+                cursor_row--;
+                return;
+            }else if(scancode==EXT_SCANCODE_RIGHT && !(cursor_row==24 && cursor_col==79)){
+                if(cursor_col==79){
+                    cursor_row++;
+                    cursor_col=0;
+                }else{
+                    cursor_col++;
+                }
+                return;
+            }else if(scancode==EXT_SCANCODE_LEFT && !(cursor_row==0&&cursor_col==0)){
+                if(cursor_col==0){
+                    cursor_row--;
+                    cursor_col=79;
+                }else{
+                    cursor_col--;
+                }
+                return;
+            }else if(scancode==EXT_SCANCODE_DOWN && cursor_row<25){
+                cursor_row++;
+                return;
+            }
+            // keyboard_state.read_extended_mode = false;
+            // return;
+        // }
+
         char ascii_char = keyboard_scancode_1_to_ascii_map[scancode];
         if (ascii_char == '\n') { // Enter
             if (cursor_row < 25) {
@@ -119,7 +145,7 @@ void keyboard_isr(void) {
             }
         }
         else if (ascii_char == '\b') { // Backspace
-            if (cursor_row > 0) {
+            if (cursor_row > 0 && cursor_col==0) {
                 cursor_col = 79;
                 cursor_row--;
                 framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
@@ -140,6 +166,7 @@ void keyboard_isr(void) {
             cursor_col++;
             framebuffer_set_cursor(cursor_row, cursor_col);
         }
+        framebuffer_write(cursor_row,cursor_col+1,' ',0xF,0x0);
     } 
     else {
         keyboard_state.keyboard_buffer = '\0';   
