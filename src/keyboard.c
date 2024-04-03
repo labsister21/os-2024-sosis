@@ -82,6 +82,7 @@ void get_keyboard_buffer(char *buf) {
 // Define cursor position variables
 static uint8_t cursor_col = 0;
 static uint8_t cursor_row = 0;
+static bool capslock_on = false;
 
 /* -- Keyboard Interrupt Service Routine -- */
 
@@ -97,35 +98,61 @@ void keyboard_isr(void) {
             return;
         }
 
+        if (scancode == CAPSLOCK_SCANCODE) {
+            capslock_on = !capslock_on;
+            return;
+        }
+
         // if(keyboard_state.read_extended_mode){
-            if(scancode==EXT_SCANCODE_UP && cursor_row>0){
-                cursor_row--;
-                return;
-            }else if(scancode==EXT_SCANCODE_RIGHT && !(cursor_row==24 && cursor_col==79)){
-                if(cursor_col==79){
-                    cursor_row++;
-                    cursor_col=0;
-                }else{
-                    cursor_col++;
-                }
-                return;
-            }else if(scancode==EXT_SCANCODE_LEFT && !(cursor_row==0&&cursor_col==0)){
-                if(cursor_col==0){
-                    cursor_row--;
-                    cursor_col=79;
-                }else{
-                    cursor_col--;
-                }
-                return;
-            }else if(scancode==EXT_SCANCODE_DOWN && cursor_row<25){
+        if(scancode == EXT_SCANCODE_UP && cursor_row > 0){
+            cursor_row--;
+            framebuffer_set_cursor(cursor_row, cursor_col);
+            return;
+        }
+        else if(scancode == EXT_SCANCODE_RIGHT && !(cursor_row == 24 && cursor_col == 79)){
+            if(cursor_col == 79){
                 cursor_row++;
-                return;
+                cursor_col=0;
             }
+            else{
+                cursor_col++;
+            }
+            framebuffer_set_cursor(cursor_row, cursor_col);
+            return;
+        }
+        else if(scancode == EXT_SCANCODE_LEFT && !(cursor_row == 0 && cursor_col == 0)){
+            if(cursor_col == 0){
+                cursor_row--;
+                cursor_col = 79;
+                framebuffer_set_cursor(cursor_row, cursor_col);
+            }
+            else{
+                cursor_col--;
+                framebuffer_set_cursor(cursor_row, cursor_col);
+            }
+            return;
+        }
+        else if(scancode == EXT_SCANCODE_DOWN && cursor_row < 25){
+            cursor_row++;
+            framebuffer_set_cursor(cursor_row, cursor_col);
+            return;
+        }
             // keyboard_state.read_extended_mode = false;
             // return;
         // }
 
-        char ascii_char = keyboard_scancode_1_to_ascii_map[scancode];
+        char ascii_char;
+        if (capslock_on) {
+            ascii_char = keyboard_scancode_caps_to_ascii_map[scancode];
+        } 
+        else {
+            ascii_char = keyboard_scancode_1_to_ascii_map[scancode];
+        }
+
+        if (capslock_on && ascii_char >= 'a' && ascii_char <= 'z') {
+            ascii_char -= ('a' - 'A');
+        }
+
         if (ascii_char == '\n') { // Enter
             if (cursor_row < 25) {
                 cursor_row++;
