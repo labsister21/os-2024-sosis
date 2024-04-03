@@ -16,6 +16,43 @@ const uint8_t fs_signature[BLOCK_SIZE] = {
     [BLOCK_SIZE-1] = 'k',
 };
 
+void read_clusters(void *ptr, uint32_t cluster_number, uint8_t cluster_count)
+{
+    read_blocks(ptr, cluster_number * 4, cluster_count * CLUSTER_BLOCK_COUNT);
+}
+
+void write_clusters(const void *ptr, uint32_t cluster_number, uint8_t cluster_count)
+{
+    write_blocks(ptr, cluster_number * 4, cluster_count * CLUSTER_BLOCK_COUNT);
+}
+
+void init_directory_table(struct FAT32DirectoryTable *dir_table, char *name, uint32_t parent_dir_cluster)
+{
+    dir_table->table[0].cluster_high = (uint16_t)(parent_dir_cluster >> 16);
+    dir_table->table[0].cluster_low = (uint16_t)(parent_dir_cluster & 0xFFFF);
+
+    for (int i = 0; i < 8; i++)
+    {
+        dir_table->table[0].name[i] = name[i];
+    }
+
+    dir_table->table[0].attribute = ATTR_SUBDIRECTORY;
+    dir_table->table[0].user_attribute = UATTR_NOT_EMPTY;
+    dir_table->table[0].cluster_high = 0;
+    dir_table->table[0].cluster_low = 2;
+}
+
+double ceil(double x)
+{
+    int intPart = (int)x;
+    return (x > intPart) ? (double)(intPart + 1) : (double)intPart;
+}
+
+bool is_dir_table_valid(void)
+{
+    return fat32_driver_state.dir_table_buf.table[0].user_attribute == UATTR_NOT_EMPTY;
+}
+
 void create_fat32(void)
 {
     uint8_t boot_sector[BLOCK_SIZE];
