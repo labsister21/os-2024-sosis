@@ -3,8 +3,10 @@
 #include <stddef.h>
 #include "header/stdlib/string.h"
 #include "header/driver/fat32.h"
-
+#include"header/driver/framebuffer.h"
 struct FAT32DriverState fat32_driver_state;
+
+static int cursor = 0;
 
 const uint8_t fs_signature[BLOCK_SIZE] = {
     'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
@@ -35,6 +37,9 @@ void init_directory_table(struct FAT32DirectoryTable *dir_table, char *name, uin
     for (int i = 0; i < 8; i++){
         dir_table->table[0].name[i] = name[i];
     }
+    dir_table->table[1].name[0] = '.';
+    dir_table->table[1].name[1] = '.';
+
     dir_table->table[0].attribute = ATTR_SUBDIRECTORY;
     dir_table->table[1].attribute = ATTR_SUBDIRECTORY;
     dir_table->table[0].user_attribute = UATTR_NOT_EMPTY;
@@ -144,7 +149,10 @@ int8_t read_directory(struct FAT32DriverRequest request)
 
 int ceil(double x){
     int intPart = (int)x;
-    return (x > intPart) ? (intPart + 1) : intPart;
+    if (x > (double)intPart){
+        intPart++;
+    }
+    return intPart;
 }
 
 int findEmptySpace(struct FAT32FileAllocationTable *fat){
@@ -165,16 +173,16 @@ int findIdxEmptyEntry(struct FAT32DirectoryTable *dir){
     return -9999;
 }
 
-void addEntry(struct FAT32DirectoryTable *parent_dir,struct FAT32DriverRequest request, int idxEmpty){
-    memcpy(parent_dir->table[idxEmpty].name,request.name,8*sizeof(char));
-    memcpy(parent_dir->table[idxEmpty].ext,request.ext,3*sizeof(char));
-    parent_dir->table[idxEmpty].user_attribute = UATTR_NOT_EMPTY;
+void addEntry(struct FAT32DirectoryTable *parent_dir,struct FAT32DriverRequest request, int idxEntry,int cluster_idx){
+    memcpy(parent_dir->table[idxEntry].name,request.name,8*sizeof(char));
+    memcpy(parent_dir->table[idxEntry].ext,request.ext,3*sizeof(char));
+    parent_dir->table[idxEntry].user_attribute = UATTR_NOT_EMPTY;
     if(request.buffer_size==0){
-        parent_dir->table[idxEmpty].attribute = ATTR_SUBDIRECTORY;
+        parent_dir->table[idxEntry].attribute = ATTR_SUBDIRECTORY;
     }
-    parent_dir->table[idxEmpty].cluster_high = (uint16_t)(idxEmpty>>16);
-    parent_dir->table[idxEmpty].cluster_low = (uint16_t)(idxEmpty & 0xFFFF);
-    parent_dir->table[idxEmpty].filesize = request.buffer_size;
+    parent_dir->table[idxEntry].cluster_high = (uint16_t)(cluster_idx>>16);
+    parent_dir->table[idxEntry].cluster_low = (uint16_t)(cluster_idx & 0xFFFF);
+    parent_dir->table[idxEntry].filesize = request.buffer_size;
 }
 
 int8_t write(struct FAT32DriverRequest request){
@@ -199,9 +207,8 @@ int8_t write(struct FAT32DriverRequest request){
         return -1;
     }
 
-    addEntry(&fat32_driver_state.dir_table_buf,request,idx);
+    addEntry(&fat32_driver_state.dir_table_buf,request,idxEntryParent,idx);
     write_clusters(&fat32_driver_state.dir_table_buf.table,request.parent_cluster_number,1);
-
     // Jika yang dibuat adalah folder
     if(request.buffer_size==0){
         struct FAT32DirectoryTable new_dir={0};
@@ -211,23 +218,25 @@ int8_t write(struct FAT32DriverRequest request){
         fat32_driver_state.fat_table.cluster_map[idx] = FAT32_FAT_END_OF_FILE;
         write_clusters(&fat32_driver_state.fat_table.cluster_map,FAT_CLUSTER_NUMBER,1);
     }else{
-        int total_cluster = ceil(request.buffer_size/CLUSTER_SIZE);
+        int total_cluster = ceil((double)request.buffer_size/CLUSTER_SIZE);
         int prev = -9999;
         idx = -9999;
         for(int i=0;i<total_cluster;i++){
             prev = idx;
             idx = findEmptySpace(&fat32_driver_state.fat_table);
+            framebuffer_write(0,cursor,idx+'0',0xF,0);
+            cursor++;
             if(idx==-9999){
                 fat32_driver_state.fat_table.cluster_map[prev] = FAT32_FAT_END_OF_FILE;
                 return -1;
             }else{
-                write_clusters(request.buf+(i*CLUSTER_SIZE),idx,1);
+                write_clusters(request.buf+(i*CLUSTER_SIZE),(uint32_t)idx,1);
                 if(prev!=-9999){
                     fat32_driver_state.fat_table.cluster_map[prev] = (uint32_t)(idx);
                 }
+                fat32_driver_state.fat_table.cluster_map[idx] = FAT32_FAT_END_OF_FILE;
             }
         }
-        fat32_driver_state.fat_table.cluster_map[idx] = FAT32_FAT_END_OF_FILE;
         write_clusters(&fat32_driver_state.fat_table.cluster_map,FAT_CLUSTER_NUMBER,1);
     }
     return 0;

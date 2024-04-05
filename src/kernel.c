@@ -48,16 +48,61 @@ void kernel_setup(void) {
     // read_clusters(&fat32_driver_state.dir_table_buf, ROOT_CLUSTER_NUMBER, 1);
     // int idx = findEntry(fat32_driver_state.dir_table_buf,name,ext);
     // uint32_t cluster_parent = (fat32_driver_state.dir_table_buf.table[idx].cluster_high<<16)|(fat32_driver_state.dir_table_buf.table[idx].cluster_low);
-    struct FAT32DriverRequest request = {
-        .buf                   = NULL,
-        .name                  = "matthew",
+    uint8_t arr1[CLUSTER_SIZE+1] = {
+    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+    [CLUSTER_SIZE-1] = '1',
+    [CLUSTER_SIZE] = '2',
+    };
+    struct FAT32DriverRequest requestWRITE1 = {
+        .buf                   = arr1,
+        .name                  = "file1",
         .ext                   = "",
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = 1000,
+        .buffer_size           = CLUSTER_SIZE+1,
     } ;
 
-    framebuffer_write(0,1,write(request)+'0',0xF,0);
-    framebuffer_write(0,2,read(request)+'0',0xF,0);
+    framebuffer_write(1,1,write(requestWRITE1)+'0',0xF,0);
+    // char ar[14];
+    // request.buf = ar;
+    // framebuffer_write(0,2,read(request)+'0',0xF,0);
+    uint8_t arr2[CLUSTER_SIZE] = {
+    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+    [CLUSTER_SIZE-2] = 'O',
+    [CLUSTER_SIZE-1] = 'k',
+    };
+    struct FAT32DriverRequest requestWRITE2 = {
+        .buf                   = arr2,
+        .name                  = "file2",
+        .ext                   = "",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = CLUSTER_SIZE,
+    } ;
+    framebuffer_write(1,2,write(requestWRITE2)+'0',0xF,0);
+    uint8_t arr3[CLUSTER_SIZE] = {
+    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+    [CLUSTER_SIZE-2] = 'O',
+    [CLUSTER_SIZE-1] = 'k',
+    };
+    struct FAT32DriverRequest requestWRITE3 = {
+        .buf                   = arr3,
+        .name                  = "file3",
+        .ext                   = "",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = CLUSTER_SIZE,
+    } ;
+    framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
     while(true){
         keyboard_state_activate();
     }
