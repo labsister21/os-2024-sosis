@@ -1,7 +1,6 @@
 # Tugas Besar IF2230 - 2024
 
-## Milestone 1
-### Pembuatan Sistem Operasi x86, Interrupt, Driver, File System
+> Milestone 1: Pembuatan Sistem Operasi x86, Interrupt, Driver, File System
 
 ## Contributors
 |   NIM    |                  Nama                  |
