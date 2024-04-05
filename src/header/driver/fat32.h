@@ -138,7 +138,7 @@ struct FAT32DriverRequest {
     uint32_t  buffer_size;
 } __attribute__((packed));
 
-
+extern struct FAT32DriverState fat32_driver_state;
 
 
 
@@ -246,5 +246,7 @@ int8_t write(struct FAT32DriverRequest request);
  * @return Error code: 0 success - 1 not found - 2 folder is not empty - -1 unknown
  */
 int8_t delete(struct FAT32DriverRequest request);
+
+int findEntry(struct FAT32DirectoryTable dir_table, char name[8],char ext[3]);
 
 #endif
