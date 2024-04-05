@@ -22,9 +22,9 @@
 |                                | Memuat IDT pada CPU                                                                   |     V     |
 | Keyboard Driver                | Menyalakan IRQ Keyboard                                                               |     V     |
 |                                | Membuat driver untuk menerima dan menerjemahkan input keyboard                        |     V     |
-| Filesystem                     | Menambahkan hard drive pada virtual machine                                           |           |
-|                                | Membuat driver untuk I/O pada hard drive                                              |           |
-|                                | Membuat struktur data untuk file system FAT32                                         |           |
-|                                | Membuat operasi write pada filesystem                                                 |           |
-|                                | Membuat operasi read pada filesystem                                                  |           |
-|                                | Membuat operasi delete pada filesystem                                                |           |
+| Filesystem                     | Menambahkan hard drive pada virtual machine                                           |     V     |
+|                                | Membuat driver untuk I/O pada hard drive                                              |     V     |
+|                                | Membuat struktur data untuk file system FAT32                                         |     V     |
+|                                | Membuat operasi write pada filesystem                                                 |     V     |
+|                                | Membuat operasi read pada filesystem                                                  |     V     |
+|                                | Membuat operasi delete pada filesystem                                                |     V     |

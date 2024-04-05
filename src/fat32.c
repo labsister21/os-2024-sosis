@@ -3,10 +3,8 @@
 #include <stddef.h>
 #include "header/stdlib/string.h"
 #include "header/driver/fat32.h"
-#include"header/driver/framebuffer.h"
-struct FAT32DriverState fat32_driver_state;
 
-static int cursor = 0;
+static struct FAT32DriverState fat32_driver_state;
 
 const uint8_t fs_signature[BLOCK_SIZE] = {
     'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
@@ -224,8 +222,6 @@ int8_t write(struct FAT32DriverRequest request){
         for(int i=0;i<total_cluster;i++){
             prev = idx;
             idx = findEmptySpace(&fat32_driver_state.fat_table);
-            framebuffer_write(0,cursor,idx+'0',0xF,0);
-            cursor++;
             if(idx==-9999){
                 fat32_driver_state.fat_table.cluster_map[prev] = FAT32_FAT_END_OF_FILE;
                 return -1;
@@ -261,6 +257,7 @@ void deleteEntry(struct FAT32DirectoryTable *parent_dir,int idxEntry){
     parent_dir->table[idxEntry].filesize = 0;
 }
 
+
 int8_t delete(struct FAT32DriverRequest request){
     read_clusters(&fat32_driver_state.dir_table_buf,request.parent_cluster_number,1);
     int idxEntry = findEntry(fat32_driver_state.dir_table_buf,request.name,request.ext);
@@ -280,7 +277,7 @@ int8_t delete(struct FAT32DriverRequest request){
         fat32_driver_state.fat_table.cluster_map[idxCluster] = 0;
     }else{
         deleteEntry(&fat32_driver_state.dir_table_buf,idxEntry);
-        framebuffer_write(0,cursor,idxCluster+'0',0xF,0);
+
         uint8_t emptyCluster[CLUSTER_SIZE] = {[0 ... CLUSTER_SIZE-1]=0};
         while(fat32_driver_state.fat_table.cluster_map[idxCluster]!=FAT32_FAT_END_OF_FILE){
             uint32_t temp = idxCluster;

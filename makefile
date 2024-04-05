@@ -19,7 +19,7 @@ LFLAGS        = -T $(SOURCE_FOLDER)/linker.ld -melf_i386
 IFLAGS		  = -R -b boot/grub/grub1 -no-emul-boot -boot-load-size 4 -A os -input-charset utf8 -quiet -boot-info-table
 
 DISK_NAME	  = storage
-DISK_LOAD	  = -drive file=bin/sample-image.bin,format=raw,if=ide,index=0,media=disk
+DISK_LOAD	  = -drive file=bin/storage.bin,format=raw,if=ide,index=0,media=disk
 
 run: all
 	@qemu-system-i386 -s -S $(DISK_LOAD) -cdrom $(OUTPUT_FOLDER)/$(ISO_NAME).iso
