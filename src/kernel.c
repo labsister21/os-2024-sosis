@@ -44,20 +44,20 @@ void kernel_setup(void) {
     framebuffer_set_cursor(0, 0);
     initialize_filesystem_fat32();
 
-    char name[8]="folder1\0",ext[3]="\0\0\0";
-    read_clusters(&fat32_driver_state.dir_table_buf, ROOT_CLUSTER_NUMBER, 1);
-    int idx = findEntry(fat32_driver_state.dir_table_buf,name,ext);
-    uint32_t cluster_parent = (fat32_driver_state.dir_table_buf.table[idx].cluster_high<<16)|(fat32_driver_state.dir_table_buf.table[idx].cluster_low);
+    // char name[8]="folder1\0",ext[3]="\0\0\0";
+    // read_clusters(&fat32_driver_state.dir_table_buf, ROOT_CLUSTER_NUMBER, 1);
+    // int idx = findEntry(fat32_driver_state.dir_table_buf,name,ext);
+    // uint32_t cluster_parent = (fat32_driver_state.dir_table_buf.table[idx].cluster_high<<16)|(fat32_driver_state.dir_table_buf.table[idx].cluster_low);
     struct FAT32DriverRequest request = {
         .buf                   = NULL,
-        .name                  = "nestedf1",
+        .name                  = "matthew",
         .ext                   = "",
-        .parent_cluster_number = cluster_parent,
-        .buffer_size           = 0,
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = 1000,
     } ;
 
-    framebuffer_write(0,1,read(request)+'0',0xF,0);
-
+    framebuffer_write(0,1,write(request)+'0',0xF,0);
+    framebuffer_write(0,2,read(request)+'0',0xF,0);
     while(true){
         keyboard_state_activate();
     }
