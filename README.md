@@ -17,15 +17,12 @@
 | Text Framebuffer               | Membuat fungsi untuk menulis pada layar                                               |     V     |
 |                                | Membuat fungsi untuk membersihkan layar                                               |     V     |
 |                                | Membuat fungsi untuk menggerakkan kursor                                              |     V     |
-|:------------------------------:|:-------------------------------------------------------------------------------------:|:---------:|
 | Interrupt                      | Membuat IDT                                                                           |     V     |
 |                                | Melakukan PIC Remapping                                                               |     V     |
 |                                | Membuat Interrupt Service Routine                                                     |     V     |
 |                                | Memuat IDT pada CPU                                                                   |     V     |
-|:------------------------------:|:-------------------------------------------------------------------------------------:|:---------:|
 | Keyboard Driver                | Menyalakan IRQ Keyboard                                                               |     V     |
 |                                | Membuat driver untuk menerima dan menerjemahkan input keyboard                        |     V     |
-|:------------------------------:|:-------------------------------------------------------------------------------------:|:---------:|
 | Filesystem                     | Menambahkan hard drive pada virtual machine                                           |           |
 |                                | Membuat driver untuk I/O pada hard drive                                              |           |
 |                                | Membuat struktur data untuk file system FAT32                                         |           |
