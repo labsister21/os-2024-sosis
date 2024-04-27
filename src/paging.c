@@ -25,7 +25,9 @@ static struct PageManagerState page_manager_state = {
         [0]                            = true,
         [1 ... PAGE_FRAME_MAX_COUNT-1] = false
     },
-    .free_page_frame_count = PAGE_FRAME_MAX_COUNT - 1
+    .free_page_frame_count = PAGE_FRAME_MAX_COUNT - 1,
+    .next_free_frame = 1,
+    .next_used_frame = 0
     // TODO: Initialize page manager state properly
 };
 
@@ -70,24 +72,30 @@ bool paging_allocate_user_page_frame(struct PageDirectory *page_dir, void *virtu
      *     > user bit       true
      *     > pagesize 4 mb  true
      */ 
-    for (uint32_t i = 1; i < PAGE_FRAME_MAX_COUNT; ++i) {
+    uint32_t free_frame;
+
+    for (uint32_t i = page_manager_state.next_free_frame; i < PAGE_FRAME_MAX_COUNT; i++) {
         if (!page_manager_state.page_frame_map[i]) {
-            // Mark the page frame as used
-            page_manager_state.page_frame_map[i] = true;
-            // Update page directory with user flags
-            struct PageDirectoryEntryFlag user_flags = {
-                .present_bit       = 1,
-                .write_bit         = 1,
-                .user_bit          = 1,
-                .use_pagesize_4_mb = 1
-            };
-            update_page_directory_entry(page_dir, (void *)(i << 22), virtual_addr, user_flags);
-            page_manager_state.free_page_frame_count--;
-            return true;
+            page_manager_state.next_free_frame = i;
+            free_frame = i;
         }
+        free_frame = (uint32_t) -1;
     }
-    // No free page frames available
-    return false;
+
+    if (free_frame == (uint32_t) -1) {
+        return false;
+    }
+
+    uint32_t page_index = ((uint32_t) virtual_addr >> 22) & 0x3FF;
+    page_dir->table[page_index].flag.present_bit = 1;
+    page_dir->table[page_index].flag.write_bit = 1;
+    page_dir->table[page_index].flag.user_bit = 1;
+    page_dir->table[page_index].flag.use_pagesize_4_mb = 1;
+    page_dir->table[page_index].lower_address = free_frame;
+    page_manager_state.page_frame_map[free_frame] = true;
+    page_manager_state.free_page_frame_count--;
+    flush_single_tlb(virtual_addr);
+    return true;
 }
 
 bool paging_free_user_page_frame(struct PageDirectory *page_dir, void *virtual_addr) {
@@ -97,19 +105,15 @@ bool paging_free_user_page_frame(struct PageDirectory *page_dir, void *virtual_a
      * - Remove the entry by setting it into 0
      */
     uint32_t page_index = ((uint32_t) virtual_addr >> 22) & 0x3FF;
-    if (page_dir->table[page_index].flag.present_bit) {
-        uint32_t physical_addr = (page_dir->table[page_index].lower_address << 22);
-        uint32_t frame_index = physical_addr >> 22;
-        page_manager_state.page_frame_map[frame_index] = false;
-        // Clear the entry
-        page_dir->table[page_index].flag.present_bit = 0;
-        page_dir->table[page_index].flag.write_bit = 0;
-        page_dir->table[page_index].flag.user_bit = 0;
-        page_dir->table[page_index].flag.use_pagesize_4_mb = 0;
-        page_manager_state.free_page_frame_count++;
-        return true;
-    }
-    // Page not found or already deallocated
-    return false;
+    uint32_t physical_frame = page_dir->table[page_index].lower_address;
 
+    if (page_manager_state.page_frame_map[physical_frame] == false) {
+        return false;
+    }
+
+    page_manager_state.page_frame_map[physical_frame] = false;
+    page_manager_state.free_page_frame_count++;
+    page_dir->table[page_index].lower_address = 0;
+    flush_single_tlb(virtual_addr);
+    return true;
 }

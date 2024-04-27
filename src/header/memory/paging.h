@@ -83,6 +83,8 @@ struct PageDirectory {
 struct PageManagerState {
     bool     page_frame_map[PAGE_FRAME_MAX_COUNT];
     uint32_t free_page_frame_count;
+    uint32_t next_free_frame;
+    uint32_t next_used_frame;
     // TODO: Add if needed ...
 } __attribute__((packed));
 
