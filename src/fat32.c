@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "header/stdlib/string.h"
-#include "header/driver/fat32.h"
+#include "header/filesystem/fat32.h"
 
 static struct FAT32DriverState fat32_driver_state;
 

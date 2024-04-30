@@ -7,7 +7,7 @@
 #include "header/cpu/idt.h"
 #include "header/driver/keyboard.h"
 #include "header/driver/disk.h"
-#include "header/driver/fat32.h"
+#include "header/filesystem/fat32.h"
 
 // void kernel_setup(void) {
 //     load_gdt(&_gdt_gdtr);
@@ -103,6 +103,14 @@ void kernel_setup(void) {
         .buffer_size           = CLUSTER_SIZE,
     } ;
     framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
+    struct FAT32DriverRequest requestREAD1 = {
+        .buf                   = NULL,
+        .name                  = "file1",
+        .ext                   = "",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = CLUSTER_SIZE+1,
+    } ;
+    framebuffer_write(1,4,read(requestREAD1)+'0',0xF,0);
     struct FAT32DriverRequest requestDELETE = {
         .buf                   = NULL,
         .name                  = "file1",
@@ -110,7 +118,8 @@ void kernel_setup(void) {
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size           = 0,
     } ;
-    framebuffer_write(1,4,delete(requestDELETE)+'0',0xF,0);
+    framebuffer_write(1,5,delete(requestDELETE)+'0',0xF,0);
+    framebuffer_write(1,6,read(requestREAD1)+'0',0xF,0);
     while(true){
         keyboard_state_activate();
     }
