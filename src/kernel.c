@@ -8,7 +8,7 @@
 #include "header/driver/keyboard.h"
 #include "header/driver/disk.h"
 #include "header/filesystem/fat32.h"
-
+#include "header/memory/paging.h"
 // void kernel_setup(void) {
 //     load_gdt(&_gdt_gdtr);
 //     pic_remap();
@@ -43,87 +43,100 @@ void kernel_setup(void) {
     framebuffer_clear();
     framebuffer_set_cursor(0, 0);
     initialize_filesystem_fat32();
-
-    // char name[8]="folder1\0",ext[3]="\0\0\0";
-    // read_clusters(&fat32_driver_state.dir_table_buf, ROOT_CLUSTER_NUMBER, 1);
-    // int idx = findEntry(fat32_driver_state.dir_table_buf,name,ext);
-    // uint32_t cluster_parent = (fat32_driver_state.dir_table_buf.table[idx].cluster_high<<16)|(fat32_driver_state.dir_table_buf.table[idx].cluster_low);
-    uint8_t arr1[CLUSTER_SIZE+1] = {
-    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
-    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
-    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
-    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
-    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
-    [CLUSTER_SIZE-1] = '1',
-    [CLUSTER_SIZE] = '2',
-    };
-    struct FAT32DriverRequest requestWRITE1 = {
-        .buf                   = arr1,
-        .name                  = "file1",
-        .ext                   = "",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE+1,
-    } ;
-
-    framebuffer_write(1,1,write(requestWRITE1)+'0',0xF,0);
-    // char ar[14];
-    // request.buf = ar;
-    // framebuffer_write(0,2,read(request)+'0',0xF,0);
-    uint8_t arr2[CLUSTER_SIZE] = {
-    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
-    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
-    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
-    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
-    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
-    [CLUSTER_SIZE-2] = 'O',
-    [CLUSTER_SIZE-1] = 'k',
-    };
-    struct FAT32DriverRequest requestWRITE2 = {
-        .buf                   = arr2,
-        .name                  = "file2",
-        .ext                   = "",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE,
-    } ;
-    framebuffer_write(1,2,write(requestWRITE2)+'0',0xF,0);
-    uint8_t arr3[CLUSTER_SIZE] = {
-    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
-    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
-    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
-    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
-    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
-    [CLUSTER_SIZE-2] = 'O',
-    [CLUSTER_SIZE-1] = 'k',
-    };
-    struct FAT32DriverRequest requestWRITE3 = {
-        .buf                   = arr3,
-        .name                  = "file3",
-        .ext                   = "",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE,
-    } ;
-    framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
-    struct FAT32DriverRequest requestREAD1 = {
-        .buf                   = NULL,
-        .name                  = "file1",
-        .ext                   = "",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE+1,
-    } ;
-    framebuffer_write(1,4,read(requestREAD1)+'0',0xF,0);
-    struct FAT32DriverRequest requestDELETE = {
-        .buf                   = NULL,
-        .name                  = "file1",
-        .ext                   = "",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = 0,
-    } ;
-    framebuffer_write(1,5,delete(requestDELETE)+'0',0xF,0);
-    framebuffer_write(1,6,read(requestREAD1)+'0',0xF,0);
+    paging_allocate_user_page_frame(&_paging_kernel_page_directory,(void*)0x500000);
+    *((uint8_t*) 0x500000) = 1;
+    paging_free_user_page_frame(&_paging_kernel_page_directory,(void*)0x500000);
+    *((uint8_t*) 0x500000) = 1;
     while(true){
         keyboard_state_activate();
     }
-} 
+}
+
+// void kernel_setup(void) {
+//     load_gdt(&_gdt_gdtr);
+//     pic_remap();
+//     initialize_idt();
+//     activate_keyboard_interrupt();
+//     framebuffer_clear();
+//     framebuffer_set_cursor(0, 0);
+//     initialize_filesystem_fat32();
+
+//     uint8_t arr1[CLUSTER_SIZE+1] = {
+//     'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+//     'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+//     'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+//     'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+//     '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+//     [CLUSTER_SIZE-1] = '1',
+//     [CLUSTER_SIZE] = '2',
+//     };
+//     struct FAT32DriverRequest requestWRITE1 = {
+//         .buf                   = arr1,
+//         .name                  = "file1",
+//         .ext                   = "",
+//         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+//         .buffer_size           = CLUSTER_SIZE+1,
+//     } ;
+
+//     framebuffer_write(1,1,write(requestWRITE1)+'0',0xF,0);
+//     // char ar[14];
+//     // request.buf = ar;
+//     // framebuffer_write(0,2,read(request)+'0',0xF,0);
+//     uint8_t arr2[CLUSTER_SIZE] = {
+//     'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+//     'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+//     'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+//     'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+//     '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+//     [CLUSTER_SIZE-2] = 'O',
+//     [CLUSTER_SIZE-1] = 'k',
+//     };
+//     struct FAT32DriverRequest requestWRITE2 = {
+//         .buf                   = arr2,
+//         .name                  = "file2",
+//         .ext                   = "",
+//         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+//         .buffer_size           = CLUSTER_SIZE,
+//     } ;
+//     framebuffer_write(1,2,write(requestWRITE2)+'0',0xF,0);
+//     uint8_t arr3[CLUSTER_SIZE] = {
+//     'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+//     'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+//     'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+//     'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+//     '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+//     [CLUSTER_SIZE-2] = 'O',
+//     [CLUSTER_SIZE-1] = 'k',
+//     };
+//     struct FAT32DriverRequest requestWRITE3 = {
+//         .buf                   = arr3,
+//         .name                  = "file3",
+//         .ext                   = "",
+//         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+//         .buffer_size           = CLUSTER_SIZE,
+//     } ;
+//     framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
+//     struct FAT32DriverRequest requestREAD1 = {
+//         .buf                   = NULL,
+//         .name                  = "file1",
+//         .ext                   = "",
+//         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+//         .buffer_size           = CLUSTER_SIZE+1,
+//     } ;
+//     framebuffer_write(1,4,read(requestREAD1)+'0',0xF,0);
+//     struct FAT32DriverRequest requestDELETE = {
+//         .buf                   = NULL,
+//         .name                  = "file1",
+//         .ext                   = "",
+//         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+//         .buffer_size           = 0,
+//     } ;
+//     framebuffer_write(1,5,delete(requestDELETE)+'0',0xF,0);
+//     framebuffer_write(1,6,read(requestREAD1)+'0',0xF,0);
+//     while(true){
+//         keyboard_state_activate();
+//     }
+// } 
 
 
 

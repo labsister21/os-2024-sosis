@@ -40,6 +40,9 @@ void pic_remap(void) {
 
 void main_interrupt_handler(struct InterruptFrame frame) {
     switch (frame.int_number) {
+        case PAGE_FAULT:
+            __asm__("hlt");
+            break;
         case (PIC1_OFFSET + IRQ_KEYBOARD) :
             keyboard_isr();
             break;

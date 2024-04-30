@@ -37,7 +37,7 @@
 #define ICW4_BUF_SLAVE       0x08   /* Buffered mode/slave */
 #define ICW4_BUF_MASTER      0x0C   /* Buffered mode/master */
 #define ICW4_SFNM            0x10   /* Special fully nested (not) */
-
+#define PAGE_FAULT           0xE
 
 /* -- PICs IRQ list -- */
 
