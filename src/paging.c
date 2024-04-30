@@ -94,7 +94,7 @@ bool paging_allocate_user_page_frame(struct PageDirectory *page_dir, void *virtu
     update_page_directory_entry(
         page_dir,
         (void*)&phy_addr_free,
-        (void*)&virtual_addr,
+        virtual_addr,
         flag
     );
     return true;
