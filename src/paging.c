@@ -74,6 +74,7 @@ bool paging_allocate_user_page_frame(struct PageDirectory *page_dir, void *virtu
     }
 
     int phy_mem_free = page_manager_state.next_free_frame;
+    uint32_t phy_addr_free = PAGE_FRAME_SIZE*(phy_mem_free+1);
     page_manager_state.free_page_frame_count--;
     page_manager_state.page_frame_map[phy_mem_free] = true;
     
@@ -92,7 +93,7 @@ bool paging_allocate_user_page_frame(struct PageDirectory *page_dir, void *virtu
     };
     update_page_directory_entry(
         page_dir,
-        (void*)&phy_mem_free,
+        (void*)&phy_addr_free,
         (void*)&virtual_addr,
         flag
     );
