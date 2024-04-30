@@ -27,14 +27,14 @@ extern struct PageDirectory _paging_kernel_page_directory;
  * ...
  */
 struct PageDirectoryEntryFlag {
-    uint8_t present_bit        : 1;
-    uint8_t write_bit          : 1;
-    uint8_t user_bit           : 1;
-    uint8_t write_through_bit  : 1;
-    uint8_t cache_disable_bit  : 1;
-    uint8_t accessed_bit       : 1;
-    uint8_t dirty_bit          : 1;
-    uint8_t use_pagesize_4_mb  : 1;
+    uint8_t present_bit : 1;
+    uint8_t write_bit   : 1; // If 0, writes are not allowed
+    uint8_t user_bit    : 1; // If 0, user mode not allowed
+    uint8_t pwt_bit     : 1; // If 1,Enable write through caching
+    uint8_t pcd_bit     : 1; // If 1, disable caching
+    uint8_t acc_bit     : 1; // If 1, software has accessed
+    uint8_t dirty_bit   : 1; // If 1, software has written to page
+    uint8_t use_pagesize_4_mb      : 1; // value 1 to indicates that it references a page frame
 } __attribute__((packed));
 
 /**
@@ -53,10 +53,10 @@ struct PageDirectoryEntryFlag {
 struct PageDirectoryEntry {
     struct PageDirectoryEntryFlag flag;
     uint16_t global_page    : 1;
-    uint16_t ignored        : 3;
+    uint16_t ignored_bit    : 3;
     uint16_t pat_bit        : 1;
     uint16_t higher_address : 8;
-    uint16_t reserved       : 1;
+    uint16_t reserved_bit   : 1;
     uint16_t lower_address  : 10;
 } __attribute__((packed));
 
@@ -84,8 +84,6 @@ struct PageManagerState {
     bool     page_frame_map[PAGE_FRAME_MAX_COUNT];
     uint32_t free_page_frame_count;
     uint32_t next_free_frame;
-    uint32_t next_used_frame;
-    // TODO: Add if needed ...
 } __attribute__((packed));
 
 
