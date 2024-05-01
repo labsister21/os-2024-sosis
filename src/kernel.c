@@ -16,7 +16,7 @@
 //     activate_keyboard_interrupt();
 //     framebuffer_clear();
 //     framebuffer_set_cursor(0, 0);
-    
+
 //     struct BlockBuffer b;
 //     for (int i = 0; i < 512; i++) b.buf[i] = i % 16;
 //     write_blocks(&b, 17, 1);
@@ -29,13 +29,35 @@
 //          get_keyboard_buffer(&c);
 //          if (c) {
 //             framebuffer_write(0, col++, c, 0xF, 0);
-            
+
 //          }
 //     }
 
 // }
 
-void kernel_setup(void) {
+// TERAKHIT COMMIT ===================================================================================================
+
+// void kernel_setup(void) {
+//     load_gdt(&_gdt_gdtr);
+//     pic_remap();
+//     initialize_idt();
+//     activate_keyboard_interrupt();
+//     framebuffer_clear();
+//     framebuffer_set_cursor(0, 0);
+//     initialize_filesystem_fat32();
+//     paging_allocate_user_page_frame(&_paging_kernel_page_directory,(void*)0x500000);
+//     *((uint8_t*) 0x500000) = 1;
+//     paging_free_user_page_frame(&_paging_kernel_page_directory,(void*)0x500000);
+//     *((uint8_t*) 0x500000) = 1;
+//     while(true){
+//         keyboard_state_activate();
+//     }
+// }
+
+// TERAKHIT COMMIT ===================================================================================================
+
+void kernel_setup(void)
+{
     load_gdt(&_gdt_gdtr);
     pic_remap();
     initialize_idt();
@@ -43,13 +65,28 @@ void kernel_setup(void) {
     framebuffer_clear();
     framebuffer_set_cursor(0, 0);
     initialize_filesystem_fat32();
-    paging_allocate_user_page_frame(&_paging_kernel_page_directory,(void*)0x500000);
-    *((uint8_t*) 0x500000) = 1;
-    paging_free_user_page_frame(&_paging_kernel_page_directory,(void*)0x500000);
-    *((uint8_t*) 0x500000) = 1;
-    while(true){
-        keyboard_state_activate();
-    }
+    gdt_install_tss();
+    set_tss_register();
+
+    // Allocate first 4 MiB virtual memory
+    paging_allocate_user_page_frame(&_paging_kernel_page_directory, (uint8_t *)0);
+
+    // Write shell into memory
+    struct FAT32DriverRequest request = {
+        .buf = (uint8_t *)0,
+        .name = "shell",
+        .ext = "\0\0\0",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size = 0x100000,
+    };
+    read(request);
+
+    // Set TSS $esp pointer and jump into shell
+    set_tss_kernel_current_stack();
+    kernel_execute_user_program((uint8_t *)0);
+
+    while (true)
+        ;
 }
 
 // void kernel_setup(void) {
@@ -136,9 +173,7 @@ void kernel_setup(void) {
 //     while(true){
 //         keyboard_state_activate();
 //     }
-// } 
-
-
+// }
 
 // void kernel_setup(void)
 // {
@@ -150,7 +185,6 @@ void kernel_setup(void) {
 //     framebuffer_set_cursor(3, 10);
 //     while (true);
 // }
-
 
 // #include <stdint.h>
 // #include <stdbool.h>
