@@ -12,25 +12,29 @@ void syscall(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx) {
 }
 
 int main(void) {
-    struct ClusterBuffer      cl[2]   = {0};
-    struct FAT32DriverRequest request = {
-        .buf                   = &cl,
-        .name                  = "shell",
-        .ext                   = "\0\0\0",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE,
-    };
-    int32_t retcode;
-    syscall(0, (uint32_t) &request, (uint32_t) &retcode, 0);
-    if (retcode == 0)
-        syscall(6, (uint32_t) "TOLOLO", 6, 0xF);
+    char dir[100] = "Root/";
+    char command[100] = "";
+    int idx = 0;
+    char *buf = NULL;
 
-    char buf;
-    syscall(7, 0, 0, 0);
-    while (true) {
-        syscall(4, (uint32_t) &buf, 0, 0);
-        syscall(5, (uint32_t) &buf, 0xF, 0);
+    syscall(7,0,0,0);
+    while(true){
+        syscall(6,(uint32_t)dir,10,0xF);
+        while(*buf!='\n'){
+            syscall(4,(uint32_t)buf,0,0);
+            if(*buf!='\0' && *buf!='\n'){
+                command[idx]=*buf;
+                idx++;
+                syscall(5,(uint32_t)buf,0xF,0);
+            }
+        }
+        syscall(6,(uint32_t)command,idx,0xF);
+        idx = 0;
+        *buf='\0';
     }
+
+    syscall(5,(uint32_t)command[0],0xF,0);
+
 
     return 0;
 }
