@@ -47,9 +47,56 @@ void pic_remap(void)
     out(PIC2_DATA, PIC_DISABLE_ALL_MASK);
 }
 
+void putchar(char* c,uint8_t textColor){
+    if(*c!='\0')
+    {    
+        if (*c == '\n') { // Enter
+            if (cursor_row < 25) {
+                cursor_row++;
+                cursor_col = 0;
+            }
+            framebuffer_set_cursor(cursor_row, cursor_col);
+        }
+        else if (*c == '\t') { // Tab
+            for(int i = 0; i < 4; i++) {
+                if (cursor_col > 79) {
+                    cursor_col = 0;
+                    cursor_row++;
+                }
+                framebuffer_write(cursor_row, cursor_col, ' ', 0xF, 0);
+                cursor_col++;
+                framebuffer_set_cursor(cursor_row, cursor_col);
+            }
+        }
+        else if (*c == '\b') { // Backspace
+            if (cursor_row > 0 && cursor_col == 0) {
+                cursor_col = 79;
+                cursor_row--;
+                framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
+                framebuffer_set_cursor(cursor_row, cursor_col);
+            }
+            else if (cursor_col > 0) {
+                cursor_col--;
+                framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
+                framebuffer_set_cursor(cursor_row, cursor_col);
+            }
+        }
+        else { // Regular char
+            if (cursor_col > 79) {
+                cursor_col = 0;
+                cursor_row++;
+            }
+            framebuffer_write(cursor_row, cursor_col, *c, textColor, 0);
+            cursor_col++;
+            framebuffer_set_cursor(cursor_row, cursor_col);
+        }
+        framebuffer_write(cursor_row,cursor_col + 1,' ', 0xF, 0x0);
+    }
+}
+
 void puts(char* ebx,uint32_t ecx,uint32_t edx){
     for(int i=0;i<(int)ecx;i++){
-        framebuffer_write(cursor_row,cursor_col,ebx[i],edx,0);
+        putchar(ebx+i,edx);
     }
 }
 
@@ -128,7 +175,7 @@ void syscall(struct InterruptFrame frame) {
             get_keyboard_buffer((char*) frame.cpu.general.ebx);
             break;
         case 5:
-            putchar((char*) frame.cpu.general.ebx, frame.cpu.general.ecx);
+            putchar((char*)frame.cpu.general.ebx,(uint8_t)frame.cpu.general.ecx);
             break;
         case 6:
             puts(
@@ -139,6 +186,10 @@ void syscall(struct InterruptFrame frame) {
             break;
         case 7: 
             keyboard_state_activate();
+            break;
+        case 8:
+            framebuffer_clear();
+            framebuffer_set_cursor(0,0);
             break;
     }
 }
