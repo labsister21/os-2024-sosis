@@ -154,51 +154,9 @@ void keyboard_isr(void) {
         if (capslock_on && ascii_char >= 'a' && ascii_char <= 'z') {
             ascii_char -= ('a' - 'A');
         }
+        keyboard_state.keyboard_buffer = ascii_char;
 
-        if (ascii_char == '\n') { // Enter
-            if (cursor_row < 25) {
-                cursor_row++;
-                cursor_col = 0;
-            }
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
-        else if (ascii_char == '\t') { // Tab
-            for(int i = 0; i < 4; i++) {
-                if (cursor_col > 79) {
-                    cursor_col = 0;
-                    cursor_row++;
-                }
-                framebuffer_write(cursor_row, cursor_col, ' ', 0XF, 0);
-                cursor_col++;
-                framebuffer_set_cursor(cursor_row, cursor_col);
-            }
-        }
-        else if (ascii_char == '\b') { // Backspace
-            if (cursor_row > 0 && cursor_col == 0) {
-                cursor_col = 79;
-                cursor_row--;
-                framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
-                framebuffer_set_cursor(cursor_row, cursor_col);
-            }
-            else if (cursor_col > 0) {
-                cursor_col--;
-                framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
-                framebuffer_set_cursor(cursor_row, cursor_col);
-            }
-        }
-        else { // Regular char
-            if (cursor_col > 79) {
-                cursor_col = 0;
-                cursor_row++;
-            }
-            framebuffer_write(cursor_row, cursor_col, ascii_char, 0XF, 0);
-            cursor_col++;
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
         framebuffer_write(cursor_row,cursor_col + 1,' ', 0xF, 0x0);
     } 
-    else {
-        keyboard_state.keyboard_buffer = '\0';   
-    }
     pic_ack(IRQ_KEYBOARD);
 }
