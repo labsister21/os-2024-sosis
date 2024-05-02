@@ -100,55 +100,6 @@ void puts(char* ebx,uint32_t ecx,uint32_t edx){
     }
 }
 
-void putchar(char* ebx, uint32_t ecx){
-    if (*ebx == '\0'){
-        return;
-    }
-
-    if (*ebx == '\n') { // Enter
-        if (cursor_row < 25) {
-            cursor_row++;
-            cursor_col = 0;
-        }
-        framebuffer_set_cursor(cursor_row, cursor_col);
-    }
-    else if (*ebx == '\t') { // Tab
-        for(int i = 0; i < 4; i++) {
-            if (cursor_col > 79) {
-                cursor_col = 0;
-                cursor_row++;
-            }
-            framebuffer_write(cursor_row, cursor_col, ' ', ecx, 0);
-            cursor_col++;
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
-    }
-    else if (*ebx == '\b') { // Backspace
-        if (cursor_row > 0 && cursor_col == 0) {
-            cursor_col = 79;
-            cursor_row--;
-            framebuffer_write(cursor_row, cursor_col,' ', ecx, 0x0);
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
-        else if (cursor_col > 0) {
-            cursor_col--;
-            framebuffer_write(cursor_row, cursor_col,' ', ecx, 0x0);
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
-    }
-    else { // Regular char
-        if (cursor_col > 79) {
-            cursor_col = 0;
-            cursor_row++;
-        }
-        framebuffer_write(cursor_row, cursor_col, *ebx, ecx, 0);
-        cursor_col++;
-        framebuffer_set_cursor(cursor_row, cursor_col);
-    }
-
-    framebuffer_write(cursor_row,cursor_col + 1,' ', ecx, 0x0);
-}
-
 void syscall(struct InterruptFrame frame) {
     switch (frame.cpu.general.eax) {
         case 0:
