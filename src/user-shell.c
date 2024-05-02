@@ -23,7 +23,7 @@ int main(void) {
     int32_t retcode;
     syscall(0, (uint32_t) &request, (uint32_t) &retcode, 0);
     if (retcode == 0)
-        syscall(6, (uint32_t) "T", 1, 0xF);
+        syscall(6, (uint32_t) "TOLOLO", 6, 0xF);
 
     char buf;
     syscall(7, 0, 0, 0);

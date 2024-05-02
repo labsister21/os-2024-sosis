@@ -57,7 +57,7 @@ const char keyboard_scancode_caps_to_ascii_map[256] = {
 struct KeyboardDriverState keyboard_state = {
     .read_extended_mode = false,
     .keyboard_input_on = false,
-    .keyboard_buffer = 0,
+    .keyboard_buffer = '\0',
 };
 
 
@@ -83,9 +83,6 @@ void get_keyboard_buffer(char *buf) {
 }
 
 
-// Define cursor position variables
-
-
 /* -- Keyboard Interrupt Service Routine -- */
 
 /**
@@ -94,6 +91,7 @@ void get_keyboard_buffer(char *buf) {
  */
 void keyboard_isr(void) {
     uint8_t scancode = in(KEYBOARD_DATA_PORT);
+    char ascii_char;
     if(keyboard_state.keyboard_input_on){
         bool is_break_code = (scancode & 0x80) != 0;
         if (is_break_code) {
@@ -139,11 +137,8 @@ void keyboard_isr(void) {
             framebuffer_set_cursor(cursor_row, cursor_col);
             return;
         }
-            // keyboard_state.read_extended_mode = false;
-            // return;
-        // }
 
-        char ascii_char;
+        // char ascii_char;
         if (capslock_on) {
             ascii_char = keyboard_scancode_caps_to_ascii_map[scancode];
         } 
@@ -154,51 +149,7 @@ void keyboard_isr(void) {
         if (capslock_on && ascii_char >= 'a' && ascii_char <= 'z') {
             ascii_char -= ('a' - 'A');
         }
-
-        if (ascii_char == '\n') { // Enter
-            if (cursor_row < 25) {
-                cursor_row++;
-                cursor_col = 0;
-            }
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
-        else if (ascii_char == '\t') { // Tab
-            for(int i = 0; i < 4; i++) {
-                if (cursor_col > 79) {
-                    cursor_col = 0;
-                    cursor_row++;
-                }
-                framebuffer_write(cursor_row, cursor_col, ' ', 0XF, 0);
-                cursor_col++;
-                framebuffer_set_cursor(cursor_row, cursor_col);
-            }
-        }
-        else if (ascii_char == '\b') { // Backspace
-            if (cursor_row > 0 && cursor_col == 0) {
-                cursor_col = 79;
-                cursor_row--;
-                framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
-                framebuffer_set_cursor(cursor_row, cursor_col);
-            }
-            else if (cursor_col > 0) {
-                cursor_col--;
-                framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
-                framebuffer_set_cursor(cursor_row, cursor_col);
-            }
-        }
-        else { // Regular char
-            if (cursor_col > 79) {
-                cursor_col = 0;
-                cursor_row++;
-            }
-            framebuffer_write(cursor_row, cursor_col, ascii_char, 0XF, 0);
-            cursor_col++;
-            framebuffer_set_cursor(cursor_row, cursor_col);
-        }
-        framebuffer_write(cursor_row,cursor_col + 1,' ', 0xF, 0x0);
+        keyboard_state.keyboard_buffer = ascii_char;
     } 
-    else {
-        keyboard_state.keyboard_buffer = '\0';   
-    }
     pic_ack(IRQ_KEYBOARD);
 }
