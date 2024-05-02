@@ -53,6 +53,10 @@ void puts(char* ebx,uint32_t ecx,uint32_t edx){
     }
 }
 
+void putchar(char ebx, uint32_t ecx){
+    framebuffer_write(cursor_row,cursor_col,ebx,ecx,0);
+}
+
 void syscall(struct InterruptFrame frame) {
     switch (frame.cpu.general.eax) {
         case 0:
@@ -77,6 +81,9 @@ void syscall(struct InterruptFrame frame) {
             break;
         case 4:
             get_keyboard_buffer((char*) frame.cpu.general.ebx);
+            break;
+        case 5:
+            putchar(frame.cpu.general.ebx, frame.cpu.general.ecx);
             break;
         case 6:
             puts(
