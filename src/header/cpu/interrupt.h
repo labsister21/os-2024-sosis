@@ -37,7 +37,6 @@
 #define ICW4_BUF_SLAVE 0x08  /* Buffered mode/slave */
 #define ICW4_BUF_MASTER 0x0C /* Buffered mode/master */
 #define ICW4_SFNM 0x10       /* Special fully nested (not) */
-#define PAGE_FAULT 0xE
 
 /* -- PICs IRQ list -- */
 
@@ -61,6 +60,8 @@
 #define IRQ_PRIMARY_ATA 14
 #define IRQ_SECOND_ATA 15
 
+#define PAGE_FAULT 0xE
+#define SYSCALL 0x30
 /**
  * CPURegister, store CPU registers values.
  *

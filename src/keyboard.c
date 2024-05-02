@@ -84,8 +84,6 @@ void get_keyboard_buffer(char *buf) {
 
 
 // Define cursor position variables
-static uint8_t cursor_col = 0;
-static uint8_t cursor_row = 0;
 
 
 /* -- Keyboard Interrupt Service Routine -- */

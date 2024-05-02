@@ -311,7 +311,7 @@ int8_t write(struct FAT32DriverRequest request)
     {
         return -1;
     }
-
+    uint8_t* ptr = (uint8_t*)request.buf;
     addEntry(&fat32_driver_state.dir_table_buf, request, idxEntryParent, idx);
     write_clusters(&fat32_driver_state.dir_table_buf.table, request.parent_cluster_number, 1);
     // Jika yang dibuat adalah folder
@@ -340,7 +340,7 @@ int8_t write(struct FAT32DriverRequest request)
             }
             else
             {
-                write_clusters(request.buf + (i * CLUSTER_SIZE), (uint32_t)idx, 1);
+                write_clusters(ptr + (i * CLUSTER_SIZE), (uint32_t)idx, 1);
                 if (prev != -9999)
                 {
                     fat32_driver_state.fat_table.cluster_map[prev] = (uint32_t)(idx);

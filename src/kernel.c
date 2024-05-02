@@ -79,7 +79,7 @@ void kernel_setup(void)
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size = 0x100000,
     };
-    read(request);
+    framebuffer_write(1,3,read(request),0xF,0);
 
     // Set TSS $esp pointer and jump into shell
     set_tss_kernel_current_stack();

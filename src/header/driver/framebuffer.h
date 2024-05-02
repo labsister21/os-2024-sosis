@@ -17,6 +17,9 @@
  * - Odd number memory:  Character color lower 4-bit, Background color upper 4-bit
 */
 
+extern uint8_t cursor_col;
+extern uint8_t cursor_row;
+
 /**
  * Set framebuffer character and color with corresponding parameter values.
  * More details: https://en.wikipedia.org/wiki/BIOS_color_attributes

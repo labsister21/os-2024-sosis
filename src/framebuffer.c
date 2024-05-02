@@ -5,6 +5,8 @@
 #include "header/cpu/portio.h"
 #include "header/stdlib/string.h"
 
+uint8_t cursor_col = 0;
+uint8_t cursor_row = 0;
 
 void framebuffer_write(uint8_t row, uint8_t col, char c, uint8_t fg, uint8_t bg) {
     /*
