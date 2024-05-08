@@ -65,13 +65,36 @@ void kernel_setup(void)
     framebuffer_clear();
     framebuffer_set_cursor(0, 0);
     initialize_filesystem_fat32();
+
+    uint8_t arr3[CLUSTER_SIZE] = {
+    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+    [CLUSTER_SIZE-2] = 'O',
+    [CLUSTER_SIZE-1] = 'k',
+    };
+
+    struct FAT32DriverRequest requestWRITE3 = {
+        .buf                   = arr3,
+        .name                  = "file3",
+        .ext                   = "",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = CLUSTER_SIZE,
+    } ;
+    framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
+
+    
     gdt_install_tss();
     set_tss_register();
 
-    // Allocate first 4 MiB virtual memory
+    
+
+    // // Allocate first 4 MiB virtual memory
     paging_allocate_user_page_frame(&_paging_kernel_page_directory, (uint8_t *)0);
 
-    // Write shell into memory
+    // // Write shell into memory
     struct FAT32DriverRequest request = {
         .buf = (uint8_t *)0,
         .name = "shell",
@@ -81,9 +104,11 @@ void kernel_setup(void)
     };
     framebuffer_write(1,3,read(request),0xF,0);
 
-    // Set TSS $esp pointer and jump into shell
+    // // Set TSS $esp pointer and jump into shell
     set_tss_kernel_current_stack();
     kernel_execute_user_program((uint8_t *)0);
+
+    
 
     while (true)
         ;
