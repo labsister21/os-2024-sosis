@@ -127,7 +127,10 @@ void syscall(struct InterruptFrame frame) {
             );
             break;
         case 4:
+            // get_keyboard_buffer((char*) frame.cpu.general.ebx);
+            keyboard_state_activate();
             get_keyboard_buffer((char*) frame.cpu.general.ebx);
+            // memcpy((char*)frame.cpu.general.ebx, buf, cpu.ecx);
             break;
         case 5:
             putchar((char*)frame.cpu.general.ebx,(uint8_t)frame.cpu.general.ecx);
