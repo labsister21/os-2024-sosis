@@ -81,6 +81,10 @@ void putchar(char* c,uint8_t textColor){
                 framebuffer_set_cursor(cursor_row, cursor_col);
             }
         }
+        else if (*c == '\0')
+        {
+            // does nothing
+        }
         else { // Regular char
             if (cursor_col > 79) {
                 cursor_col = 0;
