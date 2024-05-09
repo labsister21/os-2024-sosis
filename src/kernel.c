@@ -87,7 +87,7 @@ void kernel_setup(void)
     struct FAT32DriverRequest rrr = {
         .buf                   = arr2,
         .name                  = "file4",
-        .ext                   = "",
+        .ext                   = "txt",
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size           = CLUSTER_SIZE,
     } ;
@@ -97,7 +97,7 @@ void kernel_setup(void)
     struct FAT32DriverRequest requestWRITE3 = {
         .buf                   = arr3,
         .name                  = "file3",
-        .ext                   = "",
+        .ext                   = "txt",
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size           = CLUSTER_SIZE,
     } ;
