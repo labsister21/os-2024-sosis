@@ -76,6 +76,24 @@ void kernel_setup(void)
     [CLUSTER_SIZE-1] = 'k',
     };
 
+    uint8_t arr2[CLUSTER_SIZE] = {
+    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+    'D', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
+    [CLUSTER_SIZE-2] = 'O',
+    [CLUSTER_SIZE-1] = 'k',
+    };
+
+    struct FAT32DriverRequest rrr = {
+        .buf                   = arr2,
+        .name                  = "file4",
+        .ext                   = "",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = CLUSTER_SIZE,
+    } ;
+    // framebuffer_write(1,3,write(rrr)+'0',0xF,0);
+    write(rrr);
+
     struct FAT32DriverRequest requestWRITE3 = {
         .buf                   = arr3,
         .name                  = "file3",
@@ -83,13 +101,12 @@ void kernel_setup(void)
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size           = CLUSTER_SIZE,
     } ;
-    framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
+    // framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
+    write(requestWRITE3);
 
-    
+
     gdt_install_tss();
     set_tss_register();
-
-    
 
     // // Allocate first 4 MiB virtual memory
     paging_allocate_user_page_frame(&_paging_kernel_page_directory, (uint8_t *)0);
