@@ -299,7 +299,6 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
         .parent_cluster_number = target_parent_number,
         .buffer_size = sizeof(struct FAT32DirectoryEntry)
     };
-    puts("A", 0x07);
 
     memcpy2(t_request.name, target_name, 8);
     memcpy2(t_request.ext, target_ext, 3);
@@ -314,7 +313,6 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
     uint32_t src_cluster_number;
     struct FAT32DirectoryTable src_parent_table;
     syscall(99, (uint32_t)&src_parent_table, src_parent_number, 0);
-    puts("B", 0x07);
     
     for (int32_t i = 0; i < (int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++) {
         // puts("aaa", 0x07);
@@ -331,7 +329,6 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
             }
         }
     }
-    puts("C", 0x07);
 
     // struct ClusterBuffer data_buf[(src_size + CLUSTER_SIZE - 1) / CLUSTER_SIZE];
     uint32_t num_clusters = (src_size + CLUSTER_SIZE - 1) / CLUSTER_SIZE;
@@ -339,7 +336,6 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
 
     // Allocate an array of ClusterBuffer of the correct size
     struct ClusterBuffer data_buf[num_clusters];
-    puts("D", 0x07);
 
 
     struct FAT32DriverRequest request = {
@@ -355,11 +351,9 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
     
     int8_t retcode;
     if (is_dir) {
-        puts("D1", 0x07);
         request.buf = &src_table;
         syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
     } else{
-        puts("D2", 0x07);
         syscall(0, (uint32_t)&request, (uint32_t)&retcode, 0);}
 
     if (is_dir) {
@@ -398,7 +392,6 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
 }
 
 void cp(char* command) {
-    puts("1", 0x07);
     uint16_t n_words = countWords2(command);
     int16_t recursive = -1;
     int8_t retcode = 0;
@@ -411,7 +404,6 @@ void cp(char* command) {
         .parent_cluster_number = 2,
         .buffer_size = sizeof(struct FAT32DirectoryEntry)
     };
-    puts("2", 0x07);
     for (uint16_t i = 1; i < n_words; i++) {
         uint16_t n = wordLen2(command, i);
         char word[n + 1];
@@ -426,7 +418,6 @@ void cp(char* command) {
         puts(": missing file operands\n", 0x07);
         return;
     }
-    puts("3", 0x07);
     uint16_t target_idx;
     if (recursive == n_words - 1)
         target_idx = n_words - 2;
@@ -441,7 +432,6 @@ void cp(char* command) {
         puts("root folder does not have parent\n", 0x07);
         return;
     }
-    puts("4", 0x07);
     // check if all source exists
     for (uint16_t i = 1; i < n_words; i++) {
         if (recursive == i || target_idx == i) continue;
@@ -482,7 +472,6 @@ void cp(char* command) {
             return;
         } 
     }
-    puts("5", 0x07);
     char target_name[9];
     char target_ext[4];
 
@@ -499,10 +488,8 @@ void cp(char* command) {
         memcpy2(request.ext, target_ext, 3);
         syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
     }
-    puts("6", 0x07);
     // target is an existing directory
     if (retcode == 0) {
-        puts("7", 0x07);
         uint32_t target_cluster_number;
 
         if (!strcmp2(target_filename, "..")) {
@@ -527,13 +514,11 @@ void cp(char* command) {
             copy(name, ext, 2, name, ext, target_cluster_number);
         }
     } else if (retcode == 1 || retcode == 2) {
-        puts("8", 0x07);
         if ((recursive == -1 && n_words > 3) || (recursive != -1 && n_words > 4)) {
             puts(target_filename, 0x07);
             puts(": is not a folder\n", 0x07);
             return;
         } else {
-            puts("9", 0x07);
             for (int16_t i = 1; i < n_words; i++) {
                 if (i == recursive || i == target_idx) continue;
                 char filename[12];
@@ -541,9 +526,7 @@ void cp(char* command) {
                 char name[9];
                 char ext[4];
                 parseFileName2(filename, name, ext);
-                puts("a", 0x07);
                 copy(name, ext, 2, target_name, target_ext, 2);
-                puts("b", 0x07);
             }
         }
     }
