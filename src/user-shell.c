@@ -658,6 +658,54 @@ void mkdir(char *command) {
 }
 
 
+
+void mv(char* command) {
+    uint16_t n_words = countWords2(command);
+    if (n_words != 3) {
+        puts("Usage: mv <source> <destination>\n", 0x07);
+        return;
+    }
+
+    char source_filename[12];
+    char destination_filename[12];
+    getWord2(command, 1, source_filename);
+    getWord2(command, 2, destination_filename);
+
+    char source_name[9];
+    char source_ext[4];
+    char dest_name[9];
+    char dest_ext[4];
+    
+    if (parseFileName2(source_filename, source_name, source_ext)) {
+        puts(source_filename, 0x07);
+        puts(": Invalid source file name or extension.\n", 0x07);
+        return;
+    }
+    if (parseFileName2(destination_filename, dest_name, dest_ext)) {
+        puts(destination_filename, 0x07);
+        puts(": Invalid destination file name or extension.\n", 0x07);
+        return;
+    }
+
+    uint32_t parent_cluster_number = 2;
+    copy(source_name, source_ext, parent_cluster_number, dest_name, dest_ext, parent_cluster_number);
+
+    struct FAT32DriverRequest request = {0};
+    int8_t retcode;
+    request.buf = NULL;
+    memcpy2(request.name, dest_name, 8);
+    memcpy2(request.ext, dest_ext, 3);
+    request.parent_cluster_number = parent_cluster_number;
+    syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
+
+    if (retcode == 0) { 
+        remove(source_name, source_ext, parent_cluster_number);
+    } else {
+        puts("Move failed: unable to verify copy.\n", 0x07);
+    }
+}
+
+
 // MAIN
 int main(void) {
     char dir[100] = "Root/";
@@ -719,7 +767,10 @@ int main(void) {
             mkdir(command);
             puts("command found", 0x07);
         }
-
+        else if (strcmp2(cmdtyped, "mv")) {
+            mv(command);
+            puts("command found", 0x07);
+        }
         else {
             puts(cmdtyped, 0x07);
             puts(": command not found\n", 0x07);
