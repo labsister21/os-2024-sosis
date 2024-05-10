@@ -610,6 +610,54 @@ void rm(char* command) {
 }
 
 
+void mkdir(char *command) {
+    uint16_t n_words = countWords2(command);
+    if (n_words < 2) {
+        puts("mkdir: missing operand\n", 0x07);
+        return;
+    }
+
+    char filename[12];
+    getWord2(command, 1, filename);  
+    
+    char name[9], ext[4];
+    if (parseFileName2(filename, name, ext)) {
+        puts(filename, 0x07);
+        puts(": invalid directory name\n", 0x07);
+        return;
+    }
+
+    struct FAT32DriverRequest request = {
+        .buf = NULL,
+        .name = {0},
+        .ext = {0},
+        .buffer_size = 0,
+        .parent_cluster_number = cwd_table.table[0].cluster_low 
+    };
+    memcpy2(request.name, name, 8);
+    memcpy2(request.ext, ext, 3);
+
+    int8_t retcode;
+    puts("Name: ", 0x07);
+    puts(name, 0x07);
+    puts("\nExt: ", 0x07);
+    puts(ext, 0x07);
+    puts("\n", 0x07);
+
+    puts("Attempting to create directory...\n", 0x07);
+    syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
+    puts("Syscall returned: ", 0x07);
+    puts("\n", 0x07);
+
+    if (retcode == 0) {
+        puts("Directory created successfully\n", 0x07);
+    } else {
+        puts("Failed to create directory, error code: ", 0x07);
+        puts("\n", 0x07);
+    }
+}
+
+
 // MAIN
 int main(void) {
     char dir[100] = "Root/";
@@ -667,6 +715,11 @@ int main(void) {
             cp(command);
             puts("command found", 0x07);
         }   
+        else if (strcmp2(cmdtyped, "mkdir")) {
+            mkdir(command);
+            puts("command found", 0x07);
+        }
+
         else {
             puts(cmdtyped, 0x07);
             puts(": command not found\n", 0x07);
