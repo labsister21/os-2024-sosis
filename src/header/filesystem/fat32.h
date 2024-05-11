@@ -244,4 +244,8 @@ int8_t write(struct FAT32DriverRequest request);
  */
 int8_t delete(struct FAT32DriverRequest request);
 
+void find(char name[8],char ext[3],int result[50], int* n_res);
+
+int findCluster(struct FAT32DriverRequest request);
+
 #endif

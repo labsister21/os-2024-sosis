@@ -3,6 +3,18 @@
 
 struct FAT32DirectoryTable cwd_table;
 
+struct ShellState{
+    char cur_dir[100];
+    int idx;
+    int cur_cluster;
+};
+
+static struct ShellState shell_state = {
+    .cur_dir = "Root/",
+    .idx = 5,
+    .cur_cluster = 2,
+};
+
 void *memset2(void *s, int c, size_t n) {
     unsigned char *p = (unsigned char *)s;  // Pointer to the memory block
     while (n--) {  // Decrement `n` each iteration
@@ -629,10 +641,10 @@ void mkdir(char *command) {
 
     struct FAT32DriverRequest request = {
         .buf = NULL,
-        .name = {0},
-        .ext = {0},
+        .name = "\0\0\0\0\0\0\0\0",
+        .ext = "\0\0\0",
         .buffer_size = 0,
-        .parent_cluster_number = cwd_table.table[0].cluster_low 
+        .parent_cluster_number = shell_state.cur_cluster
     };
     memcpy2(request.name, name, 8);
     memcpy2(request.ext, ext, 3);
@@ -645,7 +657,7 @@ void mkdir(char *command) {
     puts("\n", 0x07);
 
     puts("Attempting to create directory...\n", 0x07);
-    syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
+    syscall(2, (uint32_t)&request, (uint32_t)&retcode, 0);
     puts("Syscall returned: ", 0x07);
     puts("\n", 0x07);
 
@@ -705,24 +717,105 @@ void mv(char* command) {
     }
 }
 
+void findShell(char* command){
+    char name[8] = "\0\0\0\0\0\0\0\0", ext[3] = "\0\0\0";
+    uint16_t n_words = countWords2(command);
+    if(n_words>2){
+        puts("find: excess operand\n",0x07);
+        return;
+    }
+    char filename[12];
+    getWord2(command,1,filename);
+    if (parseFileName2(filename, name, ext)) {
+        puts(filename, 0x07);
+        puts(": invalid directory name\n", 0x07);
+        return;
+    }
 
-// MAIN
-int main(void) {
-    char dir[100] = "Root/";
-    char name[100] = "\ns0sis@OS-IF2230:";
-    char command[100] = "";
+    syscall(9,(uint32_t)name,(uint32_t)ext,0);
+}
+
+void readCluster(int cluster){
+    syscall(10,(uint32_t)&cwd_table,cluster,0);
+}
+
+void addPath(char *new_add){
     int idx = 0;
-    char *buf = '\0';
+    while(new_add[idx]!='\0'){
+        shell_state.cur_dir[shell_state.idx] = new_add[idx];
+        idx++;
+        shell_state.idx++;
+    }
+    shell_state.cur_dir[shell_state.idx] = '/';
+    shell_state.idx++;
+}
+
+void removePath(){
+    shell_state.idx--;
+    shell_state.cur_dir[shell_state.idx] = '\0';
+    while(shell_state.cur_dir[shell_state.idx-1]!='/'){
+        shell_state.idx--;
+        shell_state.cur_dir[shell_state.idx]='\0';
+    }
+}
+
+void cd(char *command){
+    char name[8],ext[3],path[11]="";
+    getWord2(command,1,path);
+
+    if(strcmp2(path,"..")){
+        if(shell_state.cur_cluster==2){
+            puts("Current directory sudah berada di root!\n",0xF);
+            return;
+        }
+        removePath();
+        shell_state.cur_cluster = (cwd_table.table[1].cluster_high<<16)|(cwd_table.table[1].cluster_low);
+        readCluster(shell_state.cur_cluster);
+        return;
+    }
+
+    parseFileName2(path,name,ext);
+    struct FAT32DriverRequest request = {
+        .buf = NULL,
+        .name = "\0\0\0\0\0\0\0\0",
+        .ext = "\0\0\0",
+        .parent_cluster_number = shell_state.cur_cluster,
+        .buffer_size = 0
+    };
+    memcpy2(request.name, name, 8);
+    memcpy2(request.ext, ext, 3);
+
+    int32_t cluster_cd;
+    syscall(11,(uint32_t)&request,(uint32_t)&cluster_cd,0);
+    if(cluster_cd==-9999){
+        puts("Masukan path CD anda invalid! Tidak ditemukan path tersebut!",0xF);
+        return;
+    }
+    
+    readCluster(cluster_cd);
+    shell_state.cur_cluster = cluster_cd;
+    addPath(path);
+}
+
+int main(void) {
+    char name[100] = "\ns0sis@OS-IF2230:";
+    readCluster(2);
+
+    syscall(7,0,0,0);
+
+    // mkdir("mkdir haha");
+    // cd("cd haha");
+    // mkdir("mkdir hihi");
+    // findShell("find hihi");
 
     while(true){
-        // char *buf = NULL;
-        syscall(7,0,0,0);
+        char command[100] = "";
+        int idx = 0;
+        char *buf = '\0';
+
         puts(name, 0xA);
-        puts(dir, 0x9);
-        // puts("hi", 0xF);
+        puts(shell_state.cur_dir, 0x9);
         puts("$ ", 0xF);
-        // syscall(6,(uint32_t)dir,10,0xF);
-        syscall(4, (uint32_t) command, 256, 0);
 
         while(*buf!='\n'){
             syscall(4,(uint32_t)buf,0,0);
@@ -744,15 +837,9 @@ int main(void) {
             
         }
 
-        // uint32_t n = wordLen2(command, 0);
-        // char cmdtyped[n + 1];
-        char *cmdtyped;
-        cmdtyped = '\0';
+        char *cmdtyped = '\0';
         getWord2(command, 0, cmdtyped);
         puts("\n", 2);
-
-        // puts(command, 0x07);
-        // puts(cmdtyped, 0x07);
 
         // DO STUFF
         if (strcmp2(cmdtyped, "rm")) {
@@ -771,19 +858,18 @@ int main(void) {
             mv(command);
             puts("command found", 0x07);
         }
+        else if (strcmp2(cmdtyped,"find")){
+            findShell(command);
+        }else if(strcmp2(cmdtyped,"clear")){
+            syscall(8,0,0,0);
+        }else if(strcmp2(cmdtyped,"cd")){
+            cd(command);
+        }
         else {
             puts(cmdtyped, 0x07);
             puts(": command not found\n", 0x07);
         }   
-
-        idx = 0;
-        *buf='\0';
-        strcpy2(command, "");
-        
     }
-
-    syscall(5,(uint32_t)command[0],0xF,0);
-
 
     return 0;
 }

@@ -188,6 +188,44 @@ int findEntry(struct FAT32DirectoryTable dir_table, char name[8], char ext[3])
     return -9999;
 }
 
+int findCluster(struct FAT32DriverRequest request){
+    read_clusters(&fat32_driver_state.dir_table_buf.table, request.parent_cluster_number, 1);
+    int idx = findEntry(fat32_driver_state.dir_table_buf, request.name, request.ext);
+    if(idx==-9999){
+        return idx;
+    }
+    return (fat32_driver_state.dir_table_buf.table[idx].cluster_high<<16)|fat32_driver_state.dir_table_buf.table[idx].cluster_low;
+}
+
+void find(char name[8],char ext[3],int result[50], int *n_res){
+    int queue[100], front=0, back=0;
+    queue[0] = 2;
+    while(front<=back){
+        read_clusters(&fat32_driver_state.dir_table_buf.table, queue[front], 1);
+        int idxEntry = findEntry(fat32_driver_state.dir_table_buf,name,ext);
+
+        if(idxEntry!=-9999){
+            result[*n_res] = queue[front];
+            (*n_res)++;
+        }
+
+        for(int i=2;i<(int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++){
+            if(fat32_driver_state.dir_table_buf.table[i].user_attribute!=UATTR_NOT_EMPTY){
+                continue;
+            }
+
+            if(fat32_driver_state.dir_table_buf.table[i].attribute!=ATTR_SUBDIRECTORY){
+                continue;
+            }
+
+            uint32_t cluster_number = (fat32_driver_state.dir_table_buf.table[i].cluster_high << 16) | fat32_driver_state.dir_table_buf.table[i].cluster_low;
+            back++;
+            queue[back] = cluster_number;
+        }
+        front++;
+    }
+}
+
 int8_t read(struct FAT32DriverRequest request)
 {
     read_clusters(&fat32_driver_state.dir_table_buf.table, request.parent_cluster_number, 1);
@@ -217,6 +255,7 @@ int8_t read(struct FAT32DriverRequest request)
     }
     return 0;
 }
+
 
 int8_t read_directory(struct FAT32DriverRequest request)
 {
