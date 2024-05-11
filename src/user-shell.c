@@ -609,7 +609,6 @@ void rm(char* command) {
     }
 }
 
-
 void mkdir(char *command) {
     uint16_t n_words = countWords2(command);
     if (n_words < 2) {
@@ -657,8 +656,6 @@ void mkdir(char *command) {
     }
 }
 
-
-
 void mv(char* command) {
     uint16_t n_words = countWords2(command);
     if (n_words != 3) {
@@ -705,6 +702,45 @@ void mv(char* command) {
     }
 }
 
+void ls() {
+    puts("name      ext type    size\n",0xF);
+    puts("==========================\n",0xF);
+    for(int32_t i = 1; i <(int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++){
+        if(cwd_table.table[i].name[0] == "\0\0\0\0\0\0\0"){
+            continue;
+        }
+        puts(cwd_table.table[i].name,0x02);
+        
+        int leftSpace = 8 - strlen2(cwd_table.table[i].name);
+
+        if (cwd_table.table[i].attribute == ATTR_SUBDIRECTORY){
+            leftSpace += 5;
+
+            char spaces[leftSpace];
+            for(int i = 0; i < leftSpace; i++){
+                spaces[i] = ' ';
+            }
+            puts(spaces,0xF);
+
+            puts("folder ",0xF);
+
+            
+            puts((char*) cwd_table.table[i].filesize,0xF);
+            puts("\n",0xF);
+        } else {
+            char spaces[leftSpace];
+            for(int i = 0; i < leftSpace; i++){
+                spaces[i] = ' ';
+            }
+            puts(spaces,0xF);
+            puts(cwd_table.table[i].ext,0xF);
+            puts(" file   ",0xF);
+            puts((char*) cwd_table.table[i].filesize,0xF);
+            puts("\n",0xF);
+
+        }
+    }
+}
 
 // MAIN
 int main(void) {
@@ -746,7 +782,7 @@ int main(void) {
 
         // uint32_t n = wordLen2(command, 0);
         // char cmdtyped[n + 1];
-        char *cmdtyped;
+        char *cmdtyped = "";
         cmdtyped = '\0';
         getWord2(command, 0, cmdtyped);
         puts("\n", 2);
@@ -770,6 +806,10 @@ int main(void) {
         else if (strcmp2(cmdtyped, "mv")) {
             mv(command);
             puts("command found", 0x07);
+        }
+        else if (strcmp2(cmdtyped, "ls")){
+            ls();
+            puts("\ncommand found", 0x07);
         }
         else {
             puts(cmdtyped, 0x07);

@@ -149,9 +149,9 @@ void syscall(struct InterruptFrame frame) {
             framebuffer_clear();
             framebuffer_set_cursor(0,0);
             break;
-        case 99:
-            struct FAT32DirectoryTable *dirtable = (struct FAT32DirectoryTable*)frame.cpu.general.ebx;
-            read_clusters(dirtable, frame.cpu.general.ecx, 1);
+        // case 99:
+            // struct FAT32DirectoryTable *dirtable = (struct FAT32DirectoryTable*)frame.cpu.general.ebx;
+            // read_clusters(dirtable, frame.cpu.general.ecx, 1);
     }
 }
 
