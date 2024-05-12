@@ -15,6 +15,8 @@ static struct ShellState shell_state = {
     .cur_cluster = 2,
 };
 
+int8_t copy_status = 0;  // 0 for success, 1 for failure
+
 void *memset2(void *s, int c, size_t n) {
     unsigned char *p = (unsigned char *)s;  // Pointer to the memory block
     while (n--) {  // Decrement `n` each iteration
@@ -407,6 +409,12 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
         if (retcode != 0)
             puts("Error writing to file", 0x07);
     }
+
+    if (true) {  
+        copy_status = 0;  // Success
+    } else {
+        copy_status = 1;  // Failure
+    }
 }
 
 void cp(char* command) {
@@ -685,11 +693,8 @@ void mv(char* command) {
     getWord2(command, 1, source_filename);
     getWord2(command, 2, destination_filename);
 
-    char source_name[9];
-    char source_ext[4];
-    char dest_name[9];
-    char dest_ext[4];
-    
+    char source_name[9], source_ext[4], dest_name[9], dest_ext[4];
+
     if (parseFileName2(source_filename, source_name, source_ext)) {
         puts(source_filename, 0x07);
         puts(": Invalid source file name or extension.\n", 0x07);
@@ -701,19 +706,11 @@ void mv(char* command) {
         return;
     }
 
-    uint32_t parent_cluster_number = 2;
-    copy(source_name, source_ext, parent_cluster_number, dest_name, dest_ext, parent_cluster_number);
+    copy(source_name, source_ext, shell_state.cur_cluster, dest_name, dest_ext, shell_state.cur_cluster);
 
-    struct FAT32DriverRequest request = {0};
-    int8_t retcode;
-    request.buf = NULL;
-    memcpy2(request.name, dest_name, 8);
-    memcpy2(request.ext, dest_ext, 3);
-    request.parent_cluster_number = parent_cluster_number;
-    syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
-
-    if (retcode == 0) { 
-        remove(source_name, source_ext, parent_cluster_number);
+    if (copy_status == 0) {  // '0' is success
+        remove(source_name, source_ext, shell_state.cur_cluster);
+        puts("Move successful.\n", 0x07);
     } else {
         puts("Move failed: unable to verify copy.\n", 0x07);
     }
