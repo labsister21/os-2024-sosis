@@ -663,21 +663,27 @@ void mkdir(char *command) {
     memcpy2(request.name, name, 8);
     memcpy2(request.ext, ext, 3);
 
-    puts("Attempting to create directory: ", 0x07);
+    int8_t retcode;
+    puts("Name: ", 0x07);
     puts(name, 0x07);
+    puts("\nExt: ", 0x07);
+    puts(ext, 0x07);
     puts("\n", 0x07);
 
-    int8_t retcode;
+    puts("Attempting to create directory...\n", 0x07);
     syscall(2, (uint32_t)&request, (uint32_t)&retcode, 0);
+    puts("Syscall returned: ", 0x07);
+    puts("\n", 0x07);
 
     if (retcode == 0) {
         puts("Directory created successfully\n", 0x07);
-        readCluster(shell_state.cur_cluster); 
+        readCluster(shell_state.cur_cluster);
     } else {
         puts("Failed to create directory, error code: ", 0x07);
         puts("\n", 0x07);
     }
 }
+
 
 
 
