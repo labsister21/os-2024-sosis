@@ -262,6 +262,10 @@ void syscall(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx) {
     __asm__ volatile("int $0x30");
 }
 
+void readCluster(int cluster){
+    syscall(10,(uint32_t)&cwd_table,cluster,0);
+}
+
 void puts(char* val, uint32_t color)
 {
     syscall(6, (uint32_t) val, strlen2(val), color);
@@ -662,6 +666,7 @@ void mkdir(char *command) {
 
     if (retcode == 0) {
         puts("Directory created successfully\n", 0x07);
+        readCluster(shell_state.cur_cluster);
     } else {
         puts("Failed to create directory, error code: ", 0x07);
         puts("\n", 0x07);
@@ -714,11 +719,32 @@ void mv(char* command) {
     }
 }
 
+void puts_integer(int number){
+    char buffer[20];
+    int i = 0;
+    do {
+        buffer[i++] = '0' + (number % 10);
+        number /= 10;
+    } while (number != 0);
+
+    // Add null terminator
+    buffer[i] = '\0';
+
+    // Reverse the string
+    int len = i;
+    for (int j = 0; j < len / 2; j++) {
+        char temp = buffer[j];
+        buffer[j] = buffer[len - j - 1];
+        buffer[len - j - 1] = temp;
+    }
+    puts(buffer,0xF);
+}
+
 void ls() {
-    puts("name      ext type    size\n",0xF);
-    puts("==========================\n",0xF);
-    for(int32_t i = 1; i <(int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++){
-        if(cwd_table.table[i].name[0] == "\0\0\0\0\0\0\0"){
+    puts("name    ext type   size\n",0xF);
+    puts("==============================\n",0xF);
+    for(int32_t i = 2; i <(int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++){
+        if(cwd_table.table[i].user_attribute!=UATTR_NOT_EMPTY){
             continue;
         }
         puts(cwd_table.table[i].name,0x02);
@@ -726,18 +752,15 @@ void ls() {
         int leftSpace = 8 - strlen2(cwd_table.table[i].name);
 
         if (cwd_table.table[i].attribute == ATTR_SUBDIRECTORY){
-            leftSpace += 5;
+            leftSpace += 4;
 
             char spaces[leftSpace];
             for(int i = 0; i < leftSpace; i++){
                 spaces[i] = ' ';
             }
-            puts(spaces,0xF);
+            syscall(6,(uint32_t)spaces,leftSpace,0xF);
 
-            puts("folder ",0xF);
-
-            
-            puts((char*) cwd_table.table[i].filesize,0xF);
+            puts("folder 0",0xF);
             puts("\n",0xF);
         } else {
             char spaces[leftSpace];
@@ -746,8 +769,11 @@ void ls() {
             }
             puts(spaces,0xF);
             puts(cwd_table.table[i].ext,0xF);
+            if(strcmp2(cwd_table.table[i].ext,"\0\0\0")){
+                puts("   ",0xF);
+            }
             puts(" file   ",0xF);
-            puts((char*) cwd_table.table[i].filesize,0xF);
+            puts_integer(cwd_table.table[i].filesize);
             puts("\n",0xF);
 
         }
@@ -769,10 +795,6 @@ void findShell(char* command){
     }
 
     syscall(9,(uint32_t)name,(uint32_t)ext,0);
-}
-
-void readCluster(int cluster){
-    syscall(10,(uint32_t)&cwd_table,cluster,0);
 }
 
 void addPath(char *new_add){
@@ -838,11 +860,6 @@ int main(void) {
     readCluster(2);
 
     syscall(7,0,0,0);
-
-    // mkdir("mkdir haha");
-    // cd("cd haha");
-    // mkdir("mkdir hihi");
-    // findShell("find hihi");
 
     while(true){
         char command[100] = "";
