@@ -282,6 +282,8 @@ void strcpy2(char *destination, const char *source) {
 
 // MAIN COMMANDS
 
+
+
 void remove(char* name, char* ext, uint32_t parent_number)
 {
     int8_t ret;
@@ -622,6 +624,7 @@ void rm(char* command) {
         }
 
         remove(name, ext, 2); // 2 could be a variable
+        readCluster(shell_state.cur_cluster);
     }
 }
 
@@ -855,6 +858,52 @@ void cd(char *command){
     addPath(path);
 }
 
+
+
+void cat(char* command){
+    char name[9],ext[4],filename[12];
+    getWord2(command,1,filename);
+    parseFileName2(filename,name,ext);
+    int idx = -9999;
+    for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
+    {   
+        if(cwd_table.table[i].user_attribute!=UATTR_NOT_EMPTY){
+            continue;
+        }
+        if (memcmp2(cwd_table.table[i].name, name, 8) == 0 && memcmp2(cwd_table.table[i].ext, ext, 3) == 0)
+        {
+            idx = i;
+        }
+    }
+    if(idx==-9999){
+        puts("Tidak ada file dengan nama dan ext tersebut!\n",0xF);
+        return;
+    }
+
+    char buff[cwd_table.table[idx].filesize];
+    struct FAT32DriverRequest request = {
+        .buf = buff,
+        .name = "\0\0\0\0\0\0\0\0",
+        .ext = "\0\0\0",
+        .parent_cluster_number = shell_state.cur_cluster,
+        .buffer_size = cwd_table.table[idx].filesize
+    };
+    memcpy2(request.name, name, 8);
+    memcpy2(request.ext, ext, 3);
+    int8_t retcode;
+    syscall(0, (uint32_t)&request, (uint32_t)&retcode, 0);
+    if (retcode == 0) {
+        puts(buff,0xF);
+    }
+    else {
+        puts("Failed to read file: ", 0x07);
+        puts_integer(retcode);
+        puts("\n", 0x07);
+        puts_integer(request.buffer_size);
+        puts("\n", 0x07);
+    }
+}
+
 int main(void) {
     char name[100] = "\ns0sis@OS-IF2230:";
     readCluster(2);
@@ -921,6 +970,9 @@ int main(void) {
         else if (strcmp2(cmdtyped, "ls")){
             ls();
             puts("\ncommand found", 0x07);
+        }
+        else if(strcmp2(cmdtyped,"cat")){
+            cat(command);
         }
         else {
             puts(cmdtyped, 0x07);
