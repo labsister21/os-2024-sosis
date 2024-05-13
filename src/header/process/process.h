@@ -46,6 +46,7 @@
 #define PROCESS_CREATE_FAIL_FS_READ_FAILURE      4
 
 
+
 /**
  * Structure data containing information about a process
  *
@@ -55,8 +56,13 @@
  */
 struct ProcessControlBlock {
     struct {
-        // ...
+        uint32_t pid;
+        PROCESS_STATE cur_state;
+        uint32_t prio;
+        bool active;
     } metadata;
+
+    struct Context context;
 
     struct {
         void     *virtual_addr_used[PROCESS_PAGE_FRAME_COUNT_MAX];
@@ -103,17 +109,16 @@ bool process_destroy(uint32_t pid);
  * @param page_directory_virtual_addr CPU register CR3, containing pointer to active page directory
  */
 struct Context {
-    CPURegister cpu;
+    struct CPURegister cpu;
     uint32_t eip;
     uint32_t eflags;
-    uint32_t page_directory_virtual_addr;
+    struct PageDirectory* page_directory_virtual_addr;
 };
 
 typedef enum PROCESS_STATE {
     READY,
     RUNNING,
     BLOCKED,
-    TERMINATE,
 } PROCESS_STATE;
 
 #endif
