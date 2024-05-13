@@ -104,6 +104,43 @@ void puts(char* ebx,uint32_t ecx,uint32_t edx){
     }
 }
 
+void printDirPath(int cluster){
+    int current_cluster = cluster,parent_cluster;
+
+    struct FAT32DirectoryTable dir_table;
+    read_clusters(&dir_table,current_cluster,1);
+    parent_cluster = (dir_table.table[1].cluster_high << 16) | dir_table.table[1].cluster_low;
+
+    while(current_cluster != parent_cluster){
+        puts(dir_table.table[0].name,8,0xF);
+        char slash='/';
+        putchar(&slash,0xF);
+
+        current_cluster = parent_cluster;
+        read_clusters(&dir_table,current_cluster,1);
+        parent_cluster = (dir_table.table[1].cluster_high << 16) | dir_table.table[1].cluster_low;
+    }
+    char* root = "Root\n";
+    puts(root,6,0xF);
+}
+
+void printAllFind(char name[8],char ext[3]){
+    int result[50],n_res = 0;
+    find(name,ext,result,&n_res);
+
+    if(n_res == 0){
+        puts("Tidak ditemukan file/folder dengan nama dan ext tersebut!",57,0xF);
+        return;
+    }
+
+    for(int i=0;i<n_res;i++){
+        char no = (i+1)+'0';
+        putchar(&no,0xF);
+        puts(". ",2,0xF);
+        printDirPath(result[i]);
+    }
+}
+
 void syscall(struct InterruptFrame frame) {
     switch (frame.cpu.general.eax) {
         case 0:
@@ -148,6 +185,17 @@ void syscall(struct InterruptFrame frame) {
         case 8:
             framebuffer_clear();
             framebuffer_set_cursor(0,0);
+            break;
+        case 9:
+            printAllFind((char*)frame.cpu.general.ebx,(char*)frame.cpu.general.ecx);
+            break;
+        case 10:
+            read_clusters((void*)frame.cpu.general.ebx,frame.cpu.general.ecx,1);
+            break;
+        case 11:
+            *((int32_t*) frame.cpu.general.ecx) = findCluster(
+                *(struct FAT32DriverRequest*) frame.cpu.general.ebx
+            );
             break;
         case 99:
             struct FAT32DirectoryTable *dirtable = (struct FAT32DirectoryTable*)frame.cpu.general.ebx;

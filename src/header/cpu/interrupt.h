@@ -173,24 +173,4 @@ struct TSSEntry
 // Set kernel stack in TSS
 void set_tss_kernel_current_stack(void);
 
-
-// ================================================NEW=============================================
-
-/**
- * Contain information needed for task to be able to get interrupted and resumed later
- *
- * @param cpu                         All CPU register state
- * @param eip                         CPU instruction counter to resume execution
- * @param eflags                      Flag register to load before resuming the execution
- * @param page_directory_virtual_addr CPU register CR3, containing pointer to active page directory
- */
-struct Context {
-    // TODO: Add important field here
-};
-
-// typedef enum PROCESS_STATE {
-//     // TODO: Add process states
-// } PROCESS_STATE;
-
-
 #endif

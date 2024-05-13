@@ -45,7 +45,28 @@
 #define PROCESS_CREATE_FAIL_NOT_ENOUGH_MEMORY    3
 #define PROCESS_CREATE_FAIL_FS_READ_FAILURE      4
 
+typedef enum PROCESS_STATE {
+    READY,
+    RUNNING,
+    BLOCKED,
+} PROCESS_STATE;
 
+// ================================================NEW=============================================
+
+/**
+ * Contain information needed for task to be able to get interrupted and resumed later
+ *
+ * @param cpu                         All CPU register state
+ * @param eip                         CPU instruction counter to resume execution
+ * @param eflags                      Flag register to load before resuming the execution
+ * @param page_directory_virtual_addr CPU register CR3, containing pointer to active page directory
+ */
+struct Context {
+    struct CPURegister cpu;
+    uint32_t eip;
+    uint32_t eflags;
+    struct PageDirectory* page_directory_virtual_addr;
+};
 
 /**
  * Structure data containing information about a process
@@ -97,28 +118,5 @@ int32_t process_create_user_process(struct FAT32DriverRequest request);
  */
 bool process_destroy(uint32_t pid);
 
-
-// ================================================NEW=============================================
-
-/**
- * Contain information needed for task to be able to get interrupted and resumed later
- *
- * @param cpu                         All CPU register state
- * @param eip                         CPU instruction counter to resume execution
- * @param eflags                      Flag register to load before resuming the execution
- * @param page_directory_virtual_addr CPU register CR3, containing pointer to active page directory
- */
-struct Context {
-    struct CPURegister cpu;
-    uint32_t eip;
-    uint32_t eflags;
-    struct PageDirectory* page_directory_virtual_addr;
-};
-
-typedef enum PROCESS_STATE {
-    READY,
-    RUNNING,
-    BLOCKED,
-} PROCESS_STATE;
 
 #endif
