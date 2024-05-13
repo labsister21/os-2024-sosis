@@ -8,15 +8,44 @@ struct ProcessControlBlock _process_list[PROCESS_COUNT_MAX];
 static struct{
     int active_process_count;
     struct ProcessControlBlock* current_running;
+    int cur_pid;
 } process_manager_state = {
     .active_process_count = 0,
     .current_running = NULL,
+    .cur_pid = 0,
 };
+
+int process_list_get_inactive_index(){
+    for(int i=0;i<PROCESS_COUNT_MAX;i++){
+        if(_process_list[i].metadata.active==false){
+            return i;
+        }
+    }
+    return -9999;
+}
+int process_generate_new_pid(){
+    process_manager_state.cur_pid++;
+    return process_manager_state.cur_pid;
+}
+
+uint32_t ceil_div(uint32_t a,uint32_t b){
+    if (b == 0) {
+        return 0;
+    }
+
+    uint32_t result = a / b;
+
+    if (a % b != 0) {
+        result++;
+    }
+
+    return result;
+}
 
 bool release_memory(struct ProcessControlBlock *pcb) {
     for (uint32_t i = 0; i < pcb->memory.page_frame_used_count; i++) {
         void *addr = pcb->memory.virtual_addr_used[i];
-        free(addr);
+        paging_free_user_page_frame(pcb->context.page_directory_virtual_addr,addr);
         pcb->memory.virtual_addr_used[i] = NULL;
     }
     paging_free_page_directory(pcb->context.page_directory_virtual_addr);
@@ -93,7 +122,6 @@ bool process_destroy(uint32_t pid) {
         {
             // release resource;
             if (!release_memory(&_process_list[i])) {
-                printf("Fail release memory id: %d\n", pid);
                 return false;
             }
 

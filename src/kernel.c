@@ -9,6 +9,7 @@
 #include "header/driver/disk.h"
 #include "header/filesystem/fat32.h"
 #include "header/memory/paging.h"
+#include "header/process/process.h"
 // void kernel_setup(void) {
 //     load_gdt(&_gdt_gdtr);
 //     pic_remap();
@@ -56,8 +57,7 @@
 
 // TERAKHIT COMMIT ===================================================================================================
 
-void kernel_setup(void)
-{
+void kernel_setup(void) {
     load_gdt(&_gdt_gdtr);
     pic_remap();
     initialize_idt();
@@ -65,71 +65,27 @@ void kernel_setup(void)
     framebuffer_clear();
     framebuffer_set_cursor(0, 0);
     initialize_filesystem_fat32();
-
-    uint8_t arr3[CLUSTER_SIZE] = {
-    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
-    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
-    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
-    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
-    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
-    [CLUSTER_SIZE-2] = 'O',
-    [CLUSTER_SIZE-1] = 'k',
-    };
-
-    uint8_t arr2[CLUSTER_SIZE] = {
-    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
-    'D', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
-    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2', '0', '2', '4', '\n',
-    [CLUSTER_SIZE-2] = 'O',
-    [CLUSTER_SIZE-1] = 'k',
-    };
-
-    struct FAT32DriverRequest rrr = {
-        .buf                   = arr2,
-        .name                  = "file4",
-        .ext                   = "txt",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE,
-    } ;
-    // framebuffer_write(1,3,write(rrr)+'0',0xF,0);
-    write(rrr);
-
-    struct FAT32DriverRequest requestWRITE3 = {
-        .buf                   = arr3,
-        .name                  = "file3",
-        .ext                   = "txt",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE,
-    } ;
-    // framebuffer_write(1,3,write(requestWRITE3)+'0',0xF,0);
-    write(requestWRITE3);
-
-
     gdt_install_tss();
     set_tss_register();
 
-    // // Allocate first 4 MiB virtual memory
-    paging_allocate_user_page_frame(&_paging_kernel_page_directory, (uint8_t *)0);
-
-    // // Write shell into memory
+    // Shell request
     struct FAT32DriverRequest request = {
-        .buf = (uint8_t *)0,
-        .name = "shell",
-        .ext = "\0\0\0",
+        .buf                   = (uint8_t*) 0,
+        .name                  = "shell",
+        .ext                   = "\0\0\0",
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size = 0x100000,
+        .buffer_size           = 0x100000,
     };
-    framebuffer_write(1,3,read(request),0xF,0);
 
-    // // Set TSS $esp pointer and jump into shell
+    // Set TSS.esp0 for interprivilege interrupt
     set_tss_kernel_current_stack();
-    kernel_execute_user_program((uint8_t *)0);
 
-    
-
-    while (true)
-        ;
+    // Create & execute process 0
+    process_create_user_process(request);
+    paging_use_page_directory(_process_list[0].context.page_directory_virtual_addr);
+    kernel_execute_user_program((void*) 0x0);
 }
+
 
 // void kernel_setup(void) {
 //     load_gdt(&_gdt_gdtr);
