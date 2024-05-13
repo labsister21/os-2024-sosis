@@ -40,14 +40,25 @@ int32_t process_create_user_process(struct FAT32DriverRequest request) {
     struct PageDirectory* cur_active = paging_get_current_page_directory_addr();
     new_pcb->context.page_directory_virtual_addr = paging_create_new_page_directory();
     paging_use_page_directory(new_pcb->context.page_directory_virtual_addr);
+
+    for(uint32_t i=0;i<page_frame_count_needed;i++){
+        new_pcb->memory.virtual_addr_used[i] = request.buf+i*PAGE_FRAME_SIZE;
+    }
     new_pcb->memory.page_frame_used_count = page_frame_count_needed;
 
     paging_allocate_user_page_frame(new_pcb->context.page_directory_virtual_addr,request.buf);
     read(request);
     paging_use_page_directory(cur_active);
 
-    new_pcb->metadata.pid = process_generate_new_pid();
+    new_pcb->context.eflags |= CPU_EFLAGS_BASE_FLAG | CPU_EFLAGS_FLAG_INTERRUPT_ENABLE;
+    new_pcb->context.cpu.segment.ds = GDT_USER_DATA_SEGMENT_SELECTOR;
+    new_pcb->context.cpu.segment.es = GDT_USER_DATA_SEGMENT_SELECTOR;
+    new_pcb->context.cpu.segment.fs = GDT_USER_DATA_SEGMENT_SELECTOR;
+    new_pcb->context.cpu.segment.gs = GDT_USER_DATA_SEGMENT_SELECTOR;
 
+    new_pcb->metadata.pid = process_generate_new_pid();
+    new_pcb->metadata.active = true;
+    new_pcb->metadata.cur_state = READY;
 exit_cleanup:
     return retcode;
 }
