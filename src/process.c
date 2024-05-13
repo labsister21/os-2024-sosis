@@ -13,6 +13,18 @@ static struct{
     .current_running = NULL,
 };
 
+bool release_memory(struct ProcessControlBlock *pcb) {
+    for (uint32_t i = 0; i < pcb->memory.page_frame_used_count; i++) {
+        void *addr = pcb->memory.virtual_addr_used[i];
+        free(addr);
+        pcb->memory.virtual_addr_used[i] = NULL;
+    }
+
+    pcb->memory.page_frame_used_count = 0;
+
+    return true;
+}
+
 int32_t process_create_user_process(struct FAT32DriverRequest request) {
     int32_t retcode = PROCESS_CREATE_SUCCESS; 
     if (process_manager_state.active_process_count >= PROCESS_COUNT_MAX) {
@@ -67,6 +79,30 @@ struct ProcessControlBlock* process_get_current_running_pcb_pointer(void){
     return process_manager_state.current_running;
 }
 
-bool process_destroy(uint32_t pid){
+/**
+ * Destroy process then release page directory and process control block
+ * 
+ * @param pid Process ID to delete
+ * @return    True if process destruction success
+ */
+bool process_destroy(uint32_t pid) {
+    for (int i = 0; i < PROCESS_COUNT_MAX; i++)
+    {
+        if (_process_list[i].metadata.pid == pid)
+        {
+            // release resource;
+            if (!release_memory(&_process_list[i])) {
+                printf("Fail release memory id: %d\n", pid);
+                return false;
+            }
 
+            // release pcb;
+            _process_list[i].metadata.pid = 0;
+            _process_list[i].metadata.active = false;
+
+            return true;
+        }
+    }
+    
+    return false;
 }
