@@ -19,6 +19,7 @@ bool release_memory(struct ProcessControlBlock *pcb) {
         free(addr);
         pcb->memory.virtual_addr_used[i] = NULL;
     }
+    paging_free_page_directory(pcb->context.page_directory_virtual_addr);
 
     pcb->memory.page_frame_used_count = 0;
 
