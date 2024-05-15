@@ -62,6 +62,22 @@
 
 #define PAGE_FAULT 0xE
 #define SYSCALL 0x30
+
+#define GDT_KERNEL_DATA_SEGMENT_SELECTOR 0x10
+
+#define PIT_MAX_FREQUENCY   1193182
+#define PIT_TIMER_FREQUENCY 1000
+#define PIT_TIMER_COUNTER   (PIT_MAX_FREQUENCY / PIT_TIMER_FREQUENCY)
+
+#define PIT_COMMAND_REGISTER_PIO          0x43
+#define PIT_COMMAND_VALUE_BINARY_MODE     0b0
+#define PIT_COMMAND_VALUE_OPR_SQUARE_WAVE (0b011 << 1)
+#define PIT_COMMAND_VALUE_ACC_LOHIBYTE    (0b11  << 4)
+#define PIT_COMMAND_VALUE_CHANNEL         (0b00  << 6) 
+#define PIT_COMMAND_VALUE (PIT_COMMAND_VALUE_BINARY_MODE | PIT_COMMAND_VALUE_OPR_SQUARE_WAVE | PIT_COMMAND_VALUE_ACC_LOHIBYTE | PIT_COMMAND_VALUE_CHANNEL)
+
+#define PIT_CHANNEL_0_DATA_PIO 0x40
+
 /**
  * CPURegister, store CPU registers values.
  * 
@@ -129,6 +145,8 @@ struct InterruptFrame
     struct InterruptStack int_stack;
 } __attribute__((packed));
 
+void activate_timer_interrupt(void);
+
 // Activate PIC mask for keyboard only
 void activate_keyboard_interrupt(void);
 
@@ -141,6 +159,7 @@ void pic_ack(uint8_t irq);
 // Shift PIC interrupt number to PIC1_OFFSET and PIC2_OFFSET (master and slave)
 void pic_remap(void);
 
+void activate_timer_interrupt(void);
 /**
  * Main interrupt handler when any interrupt / exception is raised.
  * DO NOT CALL THIS FUNCTION.

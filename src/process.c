@@ -5,27 +5,32 @@
 
 struct ProcessControlBlock _process_list[PROCESS_COUNT_MAX];
 
-static struct{
-    int active_process_count;
-    struct ProcessControlBlock* current_running;
-    int cur_pid;
-} process_manager_state = {
+struct ProcessState process_manager_state = {
     .active_process_count = 0,
-    .current_running = NULL,
-    .cur_pid = 0,
+    .cur_idx = -1,
+    .total_pid = 0,
 };
 
 int process_list_get_inactive_index(){
-    for(int i=0;i<PROCESS_COUNT_MAX;i++){
-        if(_process_list[i].metadata.active==false){
-            return i;
+    if(process_manager_state.active_process_count==0){
+        return 0;
+    }
+    int idx = process_manager_state.cur_idx-1;
+    if(idx==-1){
+        idx = PROCESS_COUNT_MAX-1;
+    }
+    while(_process_list[idx].metadata.active==false){
+        idx--;
+        if(idx==-1){
+            idx = PROCESS_COUNT_MAX-1;
         }
     }
-    return -9999;
+    return (idx==PROCESS_COUNT_MAX-1)? 0 : idx+1;
+
 }
 int process_generate_new_pid(){
-    process_manager_state.cur_pid++;
-    return process_manager_state.cur_pid;
+    process_manager_state.total_pid++;
+    return process_manager_state.total_pid;
 }
 
 uint32_t ceil_div(uint32_t a,uint32_t b){
@@ -48,8 +53,12 @@ bool release_memory(struct ProcessControlBlock *pcb) {
         paging_free_user_page_frame(pcb->context.page_directory_virtual_addr,addr);
         pcb->memory.virtual_addr_used[i] = NULL;
     }
+    struct PageDirectory* cur_run = paging_get_current_page_directory_addr();
+    paging_use_page_directory(pcb->context.page_directory_virtual_addr);
     paging_free_page_directory(pcb->context.page_directory_virtual_addr);
-
+    if(cur_run!=pcb->context.page_directory_virtual_addr){
+        paging_use_page_directory(cur_run);
+    }
     pcb->memory.page_frame_used_count = 0;
 
     return true;
@@ -97,7 +106,7 @@ int32_t process_create_user_process(struct FAT32DriverRequest request) {
     new_pcb->context.cpu.segment.es = GDT_USER_DATA_SEGMENT_SELECTOR;
     new_pcb->context.cpu.segment.fs = GDT_USER_DATA_SEGMENT_SELECTOR;
     new_pcb->context.cpu.segment.gs = GDT_USER_DATA_SEGMENT_SELECTOR;
-
+    new_pcb->context.cpu.stack.esp = 0x400000;
     new_pcb->metadata.pid = process_generate_new_pid();
     new_pcb->metadata.active = true;
     new_pcb->metadata.cur_state = READY;
@@ -106,7 +115,14 @@ exit_cleanup:
 }
 
 struct ProcessControlBlock* process_get_current_running_pcb_pointer(void){
-    return process_manager_state.current_running;
+    if(process_manager_state.cur_idx==-1){
+        return NULL;
+    }
+    return &_process_list[process_manager_state.cur_idx];
+}
+
+void qemu_exit() {
+    asm volatile ("outw %0, %1" : : "a"((uint16_t)0x2000), "Nd"((uint16_t)0x604));
 }
 
 /**
@@ -120,14 +136,19 @@ bool process_destroy(uint32_t pid) {
     {
         if (_process_list[i].metadata.pid == pid)
         {
-            // release resource;
             if (!release_memory(&_process_list[i])) {
                 return false;
             }
 
             // release pcb;
-            _process_list[i].metadata.pid = 0;
+            int idx = process_manager_state.cur_idx;
+            if(idx==i){
+                process_manager_state.cur_idx = -1;
+                qemu_exit();
+            }
+
             _process_list[i].metadata.active = false;
+            process_manager_state.active_process_count--;
 
             return true;
         }

@@ -4,8 +4,21 @@
 #include "header/cpu/portio.h"
 #include "header/driver/framebuffer.h"
 #include "header/filesystem/fat32.h"
+#include "header/scheduler/scheduler.h"
+#include "header/process/process.h"
 
-#define GDT_KERNEL_DATA_SEGMENT_SELECTOR 0x10
+void activate_timer_interrupt(void) {
+    __asm__ volatile("cli");
+    // Setup how often PIT fire
+    uint32_t pit_timer_counter_to_fire = PIT_TIMER_COUNTER;
+    out(PIT_COMMAND_REGISTER_PIO, PIT_COMMAND_VALUE);
+    out(PIT_CHANNEL_0_DATA_PIO, (uint8_t) (pit_timer_counter_to_fire & 0xFF));
+    out(PIT_CHANNEL_0_DATA_PIO, (uint8_t) ((pit_timer_counter_to_fire >> 8) & 0xFF));
+
+    // Activate the interrupt
+    out(PIC1_DATA, in(PIC1_DATA) & ~(1 << IRQ_TIMER));
+}
+
 
 void io_wait(void)
 {
@@ -190,21 +203,29 @@ void syscall(struct InterruptFrame frame) {
             printAllFind((char*)frame.cpu.general.ebx,(char*)frame.cpu.general.ecx);
             break;
         case 10:
-            read_clusters((void*)frame.cpu.general.ebx,frame.cpu.general.ecx,1);
+            struct ProcessControlBlock* cur_run = process_get_current_running_pcb_pointer();
+            process_destroy(cur_run->metadata.pid);
             break;
         case 11:
             *((int32_t*) frame.cpu.general.ecx) = findCluster(
                 *(struct FAT32DriverRequest*) frame.cpu.general.ebx
             );
             break;
-        case 99:
-            struct FAT32DirectoryTable *dirtable = (struct FAT32DirectoryTable*)frame.cpu.general.ebx;
-            read_clusters(dirtable, frame.cpu.general.ecx, 1);
+        case 12:
+            read_clusters((void*)frame.cpu.general.ebx,frame.cpu.general.ecx,1);
+            break;
+        case 13:
+            process_create_user_process(*(struct FAT32DriverRequest*) frame.cpu.general.ebx);
+            break;
+        case 14:
+            process_destroy(frame.cpu.general.ebx);
+            break;
     }
 }
 
 void main_interrupt_handler(struct InterruptFrame frame)
 {
+    pic_ack(frame.int_number);
     switch (frame.int_number)
     {
     case PAGE_FAULT:
@@ -213,13 +234,15 @@ void main_interrupt_handler(struct InterruptFrame frame)
     case (PIC1_OFFSET + IRQ_KEYBOARD):
         keyboard_isr();
         break;
+    case (PIC2_OFFSET + IRQ_TIMER):
+        scheduler_switch_to_next_process();
+        break;
     case (SYSCALL):
         syscall(frame);
         break;
     }
 
 
-    pic_ack(frame.int_number);
 }
 
 void activate_keyboard_interrupt(void)

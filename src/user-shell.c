@@ -265,7 +265,7 @@ void syscall(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx) {
 }
 
 void readCluster(int cluster){
-    syscall(10,(uint32_t)&cwd_table,cluster,0);
+    syscall(12,(uint32_t)&cwd_table,cluster,0);
 }
 
 void puts(char* val, uint32_t color)
@@ -881,6 +881,7 @@ void cat(char* command){
     }
 
     char buff[cwd_table.table[idx].filesize];
+
     struct FAT32DriverRequest request = {
         .buf = buff,
         .name = "\0\0\0\0\0\0\0\0",
@@ -888,6 +889,7 @@ void cat(char* command){
         .parent_cluster_number = shell_state.cur_cluster,
         .buffer_size = cwd_table.table[idx].filesize
     };
+
     memcpy2(request.name, name, 8);
     memcpy2(request.ext, ext, 3);
     int8_t retcode;
@@ -902,14 +904,13 @@ void cat(char* command){
         puts_integer(request.buffer_size);
         puts("\n", 0x07);
     }
-}
+}   
 
 int main(void) {
     char name[100] = "\ns0sis@OS-IF2230:";
     readCluster(2);
 
     syscall(7,0,0,0);
-
     while(true){
         char command[100] = "";
         int idx = 0;
@@ -975,6 +976,10 @@ int main(void) {
         }
         else if(strcmp2(cmdtyped,"cat")){
             cat(command);
+        }
+        else if(strcmp2(cmdtyped,"exit")){
+            syscall(10,0,0,0);
+            puts("KONTOL",0xF);
         }
         else {
             puts(cmdtyped, 0x07);

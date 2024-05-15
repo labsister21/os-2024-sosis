@@ -79,7 +79,6 @@ struct ProcessControlBlock {
     struct {
         uint32_t pid;
         PROCESS_STATE cur_state;
-        uint32_t prio;
         bool active;
     } metadata;
 
@@ -93,6 +92,13 @@ struct ProcessControlBlock {
 
 extern struct ProcessControlBlock _process_list[PROCESS_COUNT_MAX];
 
+struct ProcessState{
+    int active_process_count;
+    int cur_idx;
+    int total_pid;
+};
+
+extern struct ProcessState process_manager_state;
 
 /**
  * Get currently running process PCB pointer

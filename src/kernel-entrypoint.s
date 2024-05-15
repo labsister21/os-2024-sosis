@@ -107,3 +107,35 @@ set_tss_register:
     mov ax, 0x28 | 0 ; GDT TSS Selector, ring 0
     ltr ax
     ret
+
+global process_context_switch
+
+; Load struct Context (CPU GP-register) then jump
+; Function Signature: void process_context_switch(struct Context ctx);
+process_context_switch:
+    ; Using iret (return instruction for interrupt) technique for privilege change
+    lea  ecx, [esp+0x04] ; Save the base address for struct Context ctx
+    
+    mov  eax, 0x20 | 0x3
+    mov  ds, ax
+    mov  es, ax
+    mov  fs, ax
+    mov  gs, ax
+    push eax ; Stack segment selector (GDT_USER_DATA_SELECTOR), user privilege
+    mov  eax, [ecx+12]
+    push eax ; User space stack pointer (esp), move it into last 4 MiB
+    mov  eax, [ecx+52]
+    push eax ; eflags register state, when jump inside user program
+    mov  eax, 0x18 | 0x3
+    push eax ; Code segment selector (GDT_USER_CODE_SELECTOR), user privilege
+    mov  eax, [ecx+48]
+    push eax ; eip register to jump back
+
+    mov edi, [ecx]         ; EDI
+    mov esi, [ecx + 4]     ; ESI
+    mov ebp, [ecx + 8]     ; EBP
+    mov ebx, [ecx + 16]    ; EBX
+    mov edx, [ecx + 20]    ; EDX
+    mov eax, [ecx + 28]    ; EAX
+    mov ecx, [ecx + 24]    ; ECX
+    iret

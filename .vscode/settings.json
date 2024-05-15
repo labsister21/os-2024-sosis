@@ -2,6 +2,8 @@
     "debug.onTaskErrors": "debugAnyway",
     "files.associations": {
         "stdbool.h": "c",
-        "fat32.h": "c"
+        "fat32.h": "c",
+        "string.h": "c",
+        "paging.h": "c"
     },
 }

@@ -193,7 +193,7 @@ bool paging_free_page_directory(struct PageDirectory *page_dir) {
     for(int i=0;i<PAGING_DIRECTORY_TABLE_MAX_COUNT;i++){
         if(&page_directory_list[i]==page_dir){
             page_directory_manager.page_directory_used[i] = false;
-            for(int j=0;i<PAGE_ENTRY_COUNT;j++){
+            for(int j=0;j<500;j++){
                 page_directory_list[i].table[j].flag.present_bit = false;
             }
             return true;
