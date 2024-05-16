@@ -219,6 +219,7 @@ void syscall(struct InterruptFrame frame) {
             break;
         case 14:
             process_destroy(frame.cpu.general.ebx);
+            scheduler_switch_to_next_process();
             break;
     }
 }

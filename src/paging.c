@@ -38,7 +38,7 @@ static struct PageManagerState page_manager_state = {
         [1 ... PAGE_FRAME_MAX_COUNT-1] = false
     },
     .free_page_frame_count = PAGE_FRAME_MAX_COUNT-1,
-    .next_free_frame = 0,
+    .next_free_frame = 1,
 };
 
 void update_page_directory_entry(
@@ -194,7 +194,10 @@ bool paging_free_page_directory(struct PageDirectory *page_dir) {
         if(&page_directory_list[i]==page_dir){
             page_directory_manager.page_directory_used[i] = false;
             for(int j=0;j<500;j++){
-                page_directory_list[i].table[j].flag.present_bit = false;
+                if(page_directory_list[i].table[j].flag.present_bit == true){
+                    paging_free_user_page_frame(&page_directory_list[i],
+                    (void*)(j<<22));
+                };
             }
             return true;
         }

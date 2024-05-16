@@ -144,7 +144,6 @@ bool process_destroy(uint32_t pid) {
             int idx = process_manager_state.cur_idx;
             if(idx==i){
                 process_manager_state.cur_idx = -1;
-                qemu_exit();
             }
 
             _process_list[i].metadata.active = false;

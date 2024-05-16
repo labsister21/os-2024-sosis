@@ -906,6 +906,38 @@ void cat(char* command){
     }
 }   
 
+void exec(char* command){
+    char name[9],ext[4],filename[12];
+    getWord2(command,1,filename);
+    parseFileName2(filename,name,ext);
+    int idx = -9999;
+    for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
+    {   
+        if(cwd_table.table[i].user_attribute!=UATTR_NOT_EMPTY){
+            continue;
+        }
+        if (memcmp2(cwd_table.table[i].name, name, 8) == 0 && memcmp2(cwd_table.table[i].ext, ext, 3) == 0)
+        {
+            idx = i;
+        }
+    }
+    if(idx==-9999){
+        puts("Tidak ada file dengan nama dan ext tersebut!\n",0xF);
+        return;
+    }
+
+    struct FAT32DriverRequest request = {
+        .buf = (uint8_t*) 0,
+        .name = "\0\0\0\0\0\0\0\0",
+        .ext = "\0\0\0",
+        .parent_cluster_number = shell_state.cur_cluster,
+        .buffer_size = cwd_table.table[idx].filesize
+    };
+    memcpy2(request.name, name, 8);
+    memcpy2(request.ext, ext, 3);
+    syscall(13,(uint32_t)&request,0,0);
+}
+
 int main(void) {
     char name[100] = "\ns0sis@OS-IF2230:";
     readCluster(2);
@@ -978,8 +1010,7 @@ int main(void) {
             cat(command);
         }
         else if(strcmp2(cmdtyped,"exit")){
-            syscall(10,0,0,0);
-            puts("KONTOL",0xF);
+            break;
         }
         else {
             puts(cmdtyped, 0x07);
