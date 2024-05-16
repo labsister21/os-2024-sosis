@@ -9,6 +9,11 @@
 #define CURSOR_PORT_CMD    0x03D4
 #define CURSOR_PORT_DATA   0x03D5
 
+#define TERMINAL_HEIGHT 25
+#define TERMINAL_WIDTH 80
+#define BUFFER_HEIGHT 200
+
+
 /**
  * Terminal framebuffer
  * Resolution: 80x25
@@ -47,5 +52,13 @@ void framebuffer_set_cursor(uint8_t r, uint8_t c);
  *
  */
 void framebuffer_clear(void);
+
+void framebuffer_update_view(void);
+
+void framebuffer_scroll_up(void);
+
+void framebuffer_scroll_down(void);
+
+void handle_key_press(uint8_t scancode);
 
 #endif

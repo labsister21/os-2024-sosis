@@ -91,6 +91,7 @@ void get_keyboard_buffer(char *buf) {
  */
 void keyboard_isr(void) {
     uint8_t scancode = in(KEYBOARD_DATA_PORT);
+    handle_key_press(scancode);
     char ascii_char;
     if(keyboard_state.keyboard_input_on){
         bool is_break_code = (scancode & 0x80) != 0;
