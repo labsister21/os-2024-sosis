@@ -4,6 +4,8 @@
         "stdbool.h": "c",
         "fat32.h": "c",
         "string.h": "c",
-        "paging.h": "c"
+        "paging.h": "c",
+        "process.h": "c",
+        "command_shell.h": "c"
     },
 }

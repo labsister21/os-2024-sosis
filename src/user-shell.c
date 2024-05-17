@@ -1,22 +1,10 @@
 #include <stdint.h>
 #include "header/filesystem/fat32.h"
-
-struct FAT32DirectoryTable cwd_table;
-
-struct ShellState{
-    char cur_dir[100];
-    int idx;
-    int cur_cluster;
-};
-
-static struct ShellState shell_state = {
-    .cur_dir = "Root/",
-    .idx = 5,
-    .cur_cluster = 2,
-};
+#include "header/process/process.h"
 
 int8_t copy_status = 0;  // 0 for success, 1 for failure
 
+// Helper Function
 void *memset2(void *s, int c, size_t n) {
     unsigned char *p = (unsigned char *)s;  // Pointer to the memory block
     while (n--) {  // Decrement `n` each iteration
@@ -264,10 +252,6 @@ void syscall(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx) {
     __asm__ volatile("int $0x30");
 }
 
-void readCluster(int cluster){
-    syscall(12,(uint32_t)&cwd_table,cluster,0);
-}
-
 void puts(char* val, uint32_t color)
 {
     syscall(6, (uint32_t) val, strlen2(val), color);
@@ -280,6 +264,53 @@ void strcpy2(char *destination, const char *source) {
         source++; 
     }
     *destination = '\0';
+}
+
+void puts_integer(int number){
+    char buffer[20];
+    int i = 0;
+    do {
+        buffer[i++] = '0' + (number % 10);
+        number /= 10;
+    } while (number != 0);
+
+    // Add null terminator
+    buffer[i] = '\0';
+
+    // Reverse the string
+    int len = i;
+    for (int j = 0; j < len / 2; j++) {
+        char temp = buffer[j];
+        buffer[j] = buffer[len - j - 1];
+        buffer[len - j - 1] = temp;
+    }
+    puts(buffer,0xF);
+}
+
+int string_to_int(const char *str) {
+    int result = 0;
+    int sign = 1; // Sign of the number, initially positive
+
+    // Handle negative sign if present
+    if (*str == '-') {
+        sign = -1;
+        str++; // Move to the next character
+    }
+
+    // Iterate through each character of the string
+    while (*str != '\0') {
+        // Check if the character is a digit
+        if (*str >= '0' && *str <= '9') {
+            // Convert the character to its integer value and add it to the result
+            result = result * 10 + (*str - '0');
+        } else {
+            // If a non-digit character is encountered, stop conversion
+            break;
+        }
+        str++; // Move to the next character
+    }
+
+    return sign * result;
 }
 
 // MAIN COMMANDS
@@ -421,6 +452,8 @@ void cp(char* command) {
     uint16_t n_words = countWords2(command);
     int16_t recursive = -1;
     int8_t retcode = 0;
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
 
     struct FAT32DirectoryTable table_buf = {0};
     struct FAT32DriverRequest request = {
@@ -492,7 +525,7 @@ void cp(char* command) {
             puts(": is a directory;  -r not specified\n", 0x07);
             return;
         }
-        if (retcode == 0 && strcmp2(target_filename, "..") && memcmp2(name, cwd_table.table[0].name, 8) == 0) {
+        if (retcode == 0 && strcmp2(target_filename, "..") && memcmp2(name, cwd.table[0].name, 8) == 0) {
             puts(filename, 0x07);
             puts(": cannot copy into itself\n", 0x07);
             return;
@@ -517,16 +550,17 @@ void cp(char* command) {
     // target is an existing directory
     if (retcode == 0) {
         uint32_t target_cluster_number;
-
+        struct FAT32DirectoryTable cwd = {0};
+        syscall(22,(uint32_t)&cwd,0,0);
         if (!strcmp2(target_filename, "..")) {
             for (int32_t i = 0; i < (int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++) {
-                if (memcmp2(cwd_table.table[i].name, target_name, 8) == 0 &&
-                    memcmp2(cwd_table.table[i].ext, target_ext, 3) == 0) {
-                    target_cluster_number = (cwd_table.table[i].cluster_high << 16) | cwd_table.table[i].cluster_low;
+                if (memcmp2(cwd.table[i].name, target_name, 8) == 0 &&
+                    memcmp2(cwd.table[i].ext, target_ext, 3) == 0) {
+                    target_cluster_number = (cwd.table[i].cluster_high << 16) | cwd.table[i].cluster_low;
                 }
             }
         } else {
-            target_cluster_number = (cwd_table.table[0].cluster_high << 16) | cwd_table.table[0].cluster_low;
+            target_cluster_number = (cwd.table[0].cluster_high << 16) | cwd.table[0].cluster_low;
         }
 
         for (int16_t i = 1; i < n_words; i++) {
@@ -563,6 +597,8 @@ void rm(char* command) {
     int16_t recursive = -1;
     int8_t retcode = 0;
 
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
     struct FAT32DirectoryTable table_buf = {0};
     struct FAT32DriverRequest request = {
         .buf = &table_buf,
@@ -632,7 +668,7 @@ void rm(char* command) {
         }
 
         remove(name, ext, 2); // 2 could be a variable
-        readCluster(shell_state.cur_cluster);
+        syscall(18,(uint32_t)cur_cluster,(uint32_t)"",(uint32_t)true);
     }
 }
 
@@ -642,6 +678,8 @@ void mkdir(char *command) {
         puts("mkdir: missing operand\n", 0x07);
         return;
     }
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
 
     char filename[12];
     getWord2(command, 1, filename);  
@@ -658,34 +696,22 @@ void mkdir(char *command) {
         .name = "\0\0\0\0\0\0\0\0",
         .ext = "\0\0\0",
         .buffer_size = 0,
-        .parent_cluster_number = shell_state.cur_cluster
+        .parent_cluster_number = cur_cluster
     };
     memcpy2(request.name, name, 8);
     memcpy2(request.ext, ext, 3);
 
     int8_t retcode;
-    puts("Name: ", 0x07);
-    puts(name, 0x07);
-    puts("\nExt: ", 0x07);
-    puts(ext, 0x07);
-    puts("\n", 0x07);
-
-    puts("Attempting to create directory...\n", 0x07);
     syscall(2, (uint32_t)&request, (uint32_t)&retcode, 0);
-    puts("Syscall returned: ", 0x07);
-    puts("\n", 0x07);
 
     if (retcode == 0) {
         puts("Directory created successfully\n", 0x07);
-        readCluster(shell_state.cur_cluster);
+        syscall(18,(uint32_t)cur_cluster,(uint32_t)"",(uint32_t)true);
     } else {
         puts("Failed to create directory, error code: ", 0x07);
         puts("\n", 0x07);
     }
 }
-
-
-
 
 void mv(char* command) {
     uint16_t n_words = countWords2(command);
@@ -693,6 +719,9 @@ void mv(char* command) {
         puts("Usage: mv <source> <destination>\n", 0x07);
         return;
     }
+
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
 
     char source_filename[12];
     char destination_filename[12];
@@ -712,49 +741,30 @@ void mv(char* command) {
         return;
     }
 
-    copy(source_name, source_ext, shell_state.cur_cluster, dest_name, dest_ext, shell_state.cur_cluster);
+    copy(source_name, source_ext, cur_cluster, dest_name, dest_ext, cur_cluster);
 
     if (copy_status == 0) {  // '0' is success
-        remove(source_name, source_ext, shell_state.cur_cluster);
+        remove(source_name, source_ext,cur_cluster);
         puts("Move successful.\n", 0x07);
     } else {
         puts("Move failed: unable to verify copy.\n", 0x07);
     }
 }
 
-void puts_integer(int number){
-    char buffer[20];
-    int i = 0;
-    do {
-        buffer[i++] = '0' + (number % 10);
-        number /= 10;
-    } while (number != 0);
-
-    // Add null terminator
-    buffer[i] = '\0';
-
-    // Reverse the string
-    int len = i;
-    for (int j = 0; j < len / 2; j++) {
-        char temp = buffer[j];
-        buffer[j] = buffer[len - j - 1];
-        buffer[len - j - 1] = temp;
-    }
-    puts(buffer,0xF);
-}
-
 void ls() {
     puts("name    ext type   size\n",0xF);
     puts("==============================\n",0xF);
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
     for(int32_t i = 2; i <(int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++){
-        if(cwd_table.table[i].user_attribute!=UATTR_NOT_EMPTY){
+        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
             continue;
         }
-        puts(cwd_table.table[i].name,0x02);
+        puts(cwd.table[i].name,0x02);
         
-        int leftSpace = 8 - strlen2(cwd_table.table[i].name);
+        int leftSpace = 8 - strlen2(cwd.table[i].name);
 
-        if (cwd_table.table[i].attribute == ATTR_SUBDIRECTORY){
+        if (cwd.table[i].attribute == ATTR_SUBDIRECTORY){
             leftSpace += 4;
 
             char spaces[leftSpace];
@@ -771,12 +781,12 @@ void ls() {
                 spaces[i] = ' ';
             }
             puts(spaces,0xF);
-            puts(cwd_table.table[i].ext,0xF);
-            if(strcmp2(cwd_table.table[i].ext,"\0\0\0")){
+            puts(cwd.table[i].ext,0xF);
+            if(strcmp2(cwd.table[i].ext,"\0\0\0")){
                 puts("   ",0xF);
             }
             puts(" file   ",0xF);
-            puts_integer(cwd_table.table[i].filesize);
+            puts_integer(cwd.table[i].filesize);
             puts("\n",0xF);
 
         }
@@ -800,77 +810,66 @@ void findShell(char* command){
     syscall(9,(uint32_t)name,(uint32_t)ext,0);
 }
 
-void addPath(char *new_add){
-    int idx = 0;
-    while(new_add[idx]!='\0'){
-        shell_state.cur_dir[shell_state.idx] = new_add[idx];
-        idx++;
-        shell_state.idx++;
-    }
-    shell_state.cur_dir[shell_state.idx] = '/';
-    shell_state.idx++;
-}
-
-void removePath(){
-    shell_state.idx--;
-    shell_state.cur_dir[shell_state.idx] = '\0';
-    while(shell_state.cur_dir[shell_state.idx-1]!='/'){
-        shell_state.idx--;
-        shell_state.cur_dir[shell_state.idx]='\0';
-    }
-}
-
 void cd(char *command){
     char name[8],ext[3],path[11]="";
     getWord2(command,1,path);
 
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
+
+    if(strcmp2(path,"")){
+        puts("Missing argument",0xF);
+        return;
+    }
     if(strcmp2(path,"..")){
-        if(shell_state.cur_cluster==2){
+        if(cur_cluster==2){
             puts("Current directory sudah berada di root!\n",0xF);
             return;
         }
-        removePath();
-        shell_state.cur_cluster = (cwd_table.table[1].cluster_high<<16)|(cwd_table.table[1].cluster_low);
-        readCluster(shell_state.cur_cluster);
+        int parentClus = 0;
+        syscall(20,(uint32_t)&parentClus,0,0);
+        syscall(18,(uint32_t)parentClus,(uint32_t)"",false);
         return;
     }
 
     parseFileName2(path,name,ext);
+    struct FAT32DirectoryTable table_buf = {0};
     struct FAT32DriverRequest request = {
-        .buf = NULL,
-        .name = "\0\0\0\0\0\0\0\0",
-        .ext = "\0\0\0",
-        .parent_cluster_number = shell_state.cur_cluster,
-        .buffer_size = 0
+        .buf = &table_buf,
+        .name = "\0\0\0\0\0\0\0",
+        .ext = "\0\0",
+        .parent_cluster_number = cur_cluster, // could be a variable
+        .buffer_size = sizeof(struct FAT32DirectoryTable)
     };
     memcpy2(request.name, name, 8);
     memcpy2(request.ext, ext, 3);
 
-    int32_t cluster_cd;
-    syscall(11,(uint32_t)&request,(uint32_t)&cluster_cd,0);
-    if(cluster_cd==-9999){
-        puts("Masukan path CD anda invalid! Tidak ditemukan path tersebut!",0xF);
-        return;
+    int retcode;
+    syscall(1,(uint32_t)&request,(uint32_t)&retcode,0);
+    if(retcode==-9999){
+        puts("Tidak ditemukan direktori dengan nama tersebut!\n",0xF);
+    }else if(retcode==1){
+        puts("Input anda bukanlah sebuah direktori!\n",0xF);
+    }else{
+        int32_t cluster_cd;
+        syscall(11,(uint32_t)&request,(uint32_t)&cluster_cd,0);
+        syscall(18,(uint32_t)cluster_cd,(uint32_t)path,true);
     }
-    
-    readCluster(cluster_cd);
-    shell_state.cur_cluster = cluster_cd;
-    addPath(path);
 }
-
-
 
 void cat(char* command){
     char name[9],ext[4],filename[12];
     getWord2(command,1,filename);
     parseFileName2(filename,name,ext);
     int idx = -9999;
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
     for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
     {   
-        if(cwd_table.table[i].user_attribute!=UATTR_NOT_EMPTY){
+        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
             continue;
         }
-        if (memcmp2(cwd_table.table[i].name, name, 8) == 0 && memcmp2(cwd_table.table[i].ext, ext, 3) == 0)
+        if (memcmp2(cwd.table[i].name, name, 8) == 0 && memcmp2(cwd.table[i].ext, ext, 3) == 0)
         {
             idx = i;
         }
@@ -880,14 +879,16 @@ void cat(char* command){
         return;
     }
 
-    char buff[cwd_table.table[idx].filesize];
+    char buff[cwd.table[idx].filesize];
 
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
     struct FAT32DriverRequest request = {
         .buf = buff,
         .name = "\0\0\0\0\0\0\0\0",
         .ext = "\0\0\0",
-        .parent_cluster_number = shell_state.cur_cluster,
-        .buffer_size = cwd_table.table[idx].filesize
+        .parent_cluster_number = cur_cluster,
+        .buffer_size = cwd.table[idx].filesize
     };
 
     memcpy2(request.name, name, 8);
@@ -907,16 +908,21 @@ void cat(char* command){
 }   
 
 void exec(char* command){
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
+
+    int cur_cluster = 0;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
     char name[9],ext[4],filename[12];
     getWord2(command,1,filename);
     parseFileName2(filename,name,ext);
     int idx = -9999;
     for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
     {   
-        if(cwd_table.table[i].user_attribute!=UATTR_NOT_EMPTY){
+        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
             continue;
         }
-        if (memcmp2(cwd_table.table[i].name, name, 8) == 0 && memcmp2(cwd_table.table[i].ext, ext, 3) == 0)
+        if (memcmp2(cwd.table[i].name, name, 8) == 0 && memcmp2(cwd.table[i].ext, ext, 3) == 0)
         {
             idx = i;
         }
@@ -930,17 +936,71 @@ void exec(char* command){
         .buf = (uint8_t*) 0,
         .name = "\0\0\0\0\0\0\0\0",
         .ext = "\0\0\0",
-        .parent_cluster_number = shell_state.cur_cluster,
-        .buffer_size = cwd_table.table[idx].filesize
+        .parent_cluster_number = cur_cluster,
+        .buffer_size = cwd.table[idx].filesize
     };
     memcpy2(request.name, name, 8);
     memcpy2(request.ext, ext, 3);
-    syscall(13,(uint32_t)&request,0,0);
+
+    uint32_t retcode = -1;
+    syscall(13,(uint32_t)&request,(uint32_t)&retcode,0);
+
+    if(retcode == 1){
+        puts("Jumlah proses telah mencapai batas maksimal!\n",0xF);
+    }else if(retcode == 2){
+        puts("Entrypoint Invalid!\n",0xF);
+    }else if(retcode == 3){
+        puts("Memory tidak cukup!\n",0xF);
+    }else{
+        puts("Process berhasil dibuat!\n",0xF);
+    }
+
+}
+
+void ps(){
+    struct ProcessControlBlock list_pcb[PROCESS_COUNT_MAX];
+    int countActive = 0;
+    syscall(15,(uint32_t)&list_pcb,(uint32_t)&countActive,0);
+    puts("PID   Name    State\n",0xF);
+    puts("===================\n",0xF);
+    for(int i=0;i<countActive;i++){
+        puts_integer(list_pcb[i].metadata.pid);
+        puts("     ",0xF);
+        puts(list_pcb[i].metadata.name,0xF);
+        if(list_pcb[i].metadata.cur_state==READY){
+            puts("   READY",0xF);
+        }else if(list_pcb[i].metadata.cur_state==RUNNING){
+            puts("   RUNNING",0xF);
+        }else{
+            puts("   BLOCKED",0xF);
+        }
+        puts("\n",0xF);
+    }
+}
+
+void kill(char* command){
+    char pidStr[3] = "\0\0\0";
+    getWord2(command,1,pidStr); 
+    int pid = string_to_int(pidStr);
+    struct ProcessControlBlock list_pcb[PROCESS_COUNT_MAX];
+    int countActive = 0;
+    syscall(15,(uint32_t)&list_pcb,(uint32_t)&countActive,0);
+    
+    for(int i=0;i<PROCESS_COUNT_MAX;i++){
+        if(list_pcb[i].metadata.pid==(uint32_t)pid){
+            if(list_pcb[i].metadata.active){
+                syscall(14,pid,0,0);
+                return;
+            }
+        }
+    }
+    puts("Tidak ditemukan proses dengan id tersebut!",0xF);
 }
 
 int main(void) {
     char name[100] = "\ns0sis@OS-IF2230:";
-    readCluster(2);
+    char cur_dir[100] = "";
+    syscall(18,(uint32_t)2,(uint32_t)"",(uint32_t)true);
 
     syscall(7,0,0,0);
     while(true){
@@ -948,35 +1008,31 @@ int main(void) {
         int idx = 0;
         char *buf = '\0';
 
+        syscall(21,(uint32_t)&cur_dir,0,0);
+
         puts(name, 0xA);
-        puts(shell_state.cur_dir, 0x9);
+        puts(cur_dir, 0x9);
         puts("$ ", 0xF);
 
         while(*buf!='\n'){
-            syscall(4,(uint32_t)buf,0,0);
-            if(*buf!='\0' && *buf!='\n'){
-                if (*buf == '\b') {  // Handle backspace
-                    if (idx > 0) {  // Ensure there's something to delete
-                        idx--; 
-                        command[idx] = '\0';
-                        syscall(5, (uint32_t)"\b \b", 0xF, 0);
-                    }
+            int idxOld = idx;
+            syscall(4,(uint32_t)buf,(uint32_t)command,(uint32_t)&idx);
+            if (*buf == '\b') {  // Handle backspace
+                if(idx!=idxOld){
+                    syscall(5, (uint32_t)"\b", 0xF, 0);
                 }
-                else
-                {
-                    command[idx]=*buf;
-                    idx++;
-                    syscall(5,(uint32_t)buf,0xF,0);
-                }
+            }else if(*buf!='\0' && *buf!='\n'){
+                syscall(5,(uint32_t)buf,0xF,0);
             }
-            
+        }
+        if(*buf=='\n'){
+            syscall(17,0,0,0);
         }
 
         char *cmdtyped = '\0';
         getWord2(command, 0, cmdtyped);
-        puts("\n", 2);
+        puts("\n",0xF);
 
-        // DO STUFF
         if (strcmp2(cmdtyped, "rm")) {
             rm(command);
             puts("command found", 0x07);
@@ -1012,10 +1068,19 @@ int main(void) {
         else if(strcmp2(cmdtyped,"exit")){
             break;
         }
+        else if(strcmp2(cmdtyped,"ps")){
+            ps();
+        }
+        else if(strcmp2(cmdtyped,"kill")){
+            kill(command);
+        }
+        else if(strcmp2(cmdtyped,"exec")){
+            exec(command);
+        }
         else {
             puts(cmdtyped, 0x07);
             puts(": command not found\n", 0x07);
-        }   
+        }
     }
 
     return 0;

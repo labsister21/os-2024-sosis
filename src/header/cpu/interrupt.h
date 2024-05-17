@@ -60,6 +60,9 @@
 #define IRQ_PRIMARY_ATA 14
 #define IRQ_SECOND_ATA 15
 
+#define CMOS_ADDRESS_PORT 0x70
+#define CMOS_DATA_PORT 0x71
+
 #define PAGE_FAULT 0xE
 #define SYSCALL 0x30
 

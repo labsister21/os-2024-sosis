@@ -16,7 +16,9 @@ void scheduler_init(void){
  */
 void scheduler_save_context_to_current_running_pcb(struct Context ctx){
     struct ProcessControlBlock* cur_run = &_process_list[process_manager_state.cur_idx];
-    cur_run->context = ctx;
+    cur_run->context.cpu = ctx.cpu;
+    cur_run->context.eflags = ctx.eflags;
+    cur_run->context.eip = ctx.eip;
 }
 
 /**
@@ -28,10 +30,10 @@ void scheduler_switch_to_next_process(void){
         while (!_process_list[idx].metadata.active) {
             idx = (idx + 1) % PROCESS_COUNT_MAX;
         }
-        scheduler_save_context_to_current_running_pcb(_process_list[process_manager_state.cur_idx].context);
+        _process_list[process_manager_state.cur_idx].metadata.cur_state = READY;
         struct Context *ctx = &_process_list[idx].context;
         paging_use_page_directory(ctx->page_directory_virtual_addr);
         process_manager_state.cur_idx = idx;
+        _process_list[idx].metadata.cur_state = RUNNING;
         process_context_switch(*ctx);
-    // }
 }

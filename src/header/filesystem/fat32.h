@@ -138,6 +138,16 @@ struct FAT32DriverRequest {
     uint32_t  buffer_size;
 } __attribute__((packed));
 
+struct ShellState{
+    char cur_dir[100];
+    int idx;
+    int cur_cluster;
+};
+
+extern struct FAT32DirectoryTable cwd_table;
+
+extern struct ShellState shell_state;
+
 
 /* -- Driver Interfaces -- */
 
@@ -247,5 +257,13 @@ int8_t delete(struct FAT32DriverRequest request);
 void find(char name[8],char ext[3],int result[50], int* n_res);
 
 int findCluster(struct FAT32DriverRequest request);
+
+void update_shell_dir(int cluster,char* path,bool addDir);
+
+int get_shell_cluster();
+
+void copy_dir(char* dir);
+
+struct FAT32DirectoryTable get_cwd_table();
 
 #endif

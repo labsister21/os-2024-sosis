@@ -80,6 +80,7 @@ struct ProcessControlBlock {
         uint32_t pid;
         PROCESS_STATE cur_state;
         bool active;
+        char name[8];
     } metadata;
 
     struct Context context;
@@ -106,6 +107,8 @@ extern struct ProcessState process_manager_state;
  * @return Will return NULL if there's no running process
  */
 struct ProcessControlBlock* process_get_current_running_pcb_pointer(void);
+
+void getActivePCB(struct ProcessControlBlock* ptr,int* count);
 
 /**
  * Create new user process and setup the virtual address space.

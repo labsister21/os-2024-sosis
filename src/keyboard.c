@@ -6,6 +6,9 @@
 
 static bool capslock_on = false;
 
+static char command[100] = "";
+static int idx = 0;
+
 const char keyboard_scancode_1_to_ascii_map[256] = {
       0, 0x1B, '1', '2', '3', '4', '5', '6',  '7', '8', '9',  '0',  '-', '=', '\b', '\t',
     'q',  'w', 'e', 'r', 't', 'y', 'u', 'i',  'o', 'p', '[',  ']', '\n',   0,  'a',  's',
@@ -73,7 +76,6 @@ void keyboard_state_activate(void) {
 // Deactivate keyboard ISR / stop listening keyboard interrupt
 void keyboard_state_deactivate(void) {
     keyboard_state.keyboard_input_on = false;
-
 }
 
 // Get keyboard buffer value and flush the buffer - @param buf Pointer to char buffer
@@ -82,6 +84,35 @@ void get_keyboard_buffer(char *buf) {
     keyboard_state.keyboard_buffer = '\0';
 }
 
+void add_command(char c){
+    command[idx] = c;
+    idx++;
+}
+
+void get_command(char commandShell[100],int *idxShell){
+    for(int i=0;i<idx;i++){
+        commandShell[i] = command[i];
+    }
+    for(int i=idx;i<100;i++){
+        commandShell[i]='\0';
+    }
+    (*idxShell) = idx;
+}
+
+void clear_command(){
+    for(int i=0;i<idx;i++){
+        command[i] = '\0';
+    }
+    idx = 0;
+}
+
+void delete_command(){
+    if(idx==0){
+        return;
+    }
+    idx--;
+    command[idx] = '\0';
+}
 
 /* -- Keyboard Interrupt Service Routine -- */
 
@@ -152,5 +183,4 @@ void keyboard_isr(void) {
         }
         keyboard_state.keyboard_buffer = ascii_char;
     } 
-    pic_ack(IRQ_KEYBOARD);
 }

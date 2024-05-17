@@ -6,6 +6,7 @@
 #include "header/filesystem/fat32.h"
 #include "header/scheduler/scheduler.h"
 #include "header/process/process.h"
+#include "header/stdlib/string.h"
 
 void activate_timer_interrupt(void) {
     __asm__ volatile("cli");
@@ -18,7 +19,6 @@ void activate_timer_interrupt(void) {
     // Activate the interrupt
     out(PIC1_DATA, in(PIC1_DATA) & ~(1 << IRQ_TIMER));
 }
-
 
 void io_wait(void)
 {
@@ -154,6 +154,11 @@ void printAllFind(char name[8],char ext[3]){
     }
 }
 
+uint8_t cmos_read(uint8_t reg) {
+    out(CMOS_ADDRESS_PORT, reg);
+    return in(CMOS_DATA_PORT);
+}
+
 void syscall(struct InterruptFrame frame) {
     switch (frame.cpu.general.eax) {
         case 0:
@@ -177,10 +182,14 @@ void syscall(struct InterruptFrame frame) {
             );
             break;
         case 4:
-            // get_keyboard_buffer((char*) frame.cpu.general.ebx);
-            keyboard_state_activate();
             get_keyboard_buffer((char*) frame.cpu.general.ebx);
-            // memcpy((char*)frame.cpu.general.ebx, buf, cpu.ecx);
+            if(*(char*)frame.cpu.general.ebx=='\b'){
+                delete_command();
+            }
+            else if(*(char*)frame.cpu.general.ebx!='\0' && *(char*)frame.cpu.general.ebx!='\n' ){
+                add_command(*(char*)frame.cpu.general.ebx);
+            }
+            get_command((char*)frame.cpu.general.ecx,(int*)frame.cpu.general.edx);
             break;
         case 5:
             putchar((char*)frame.cpu.general.ebx,(uint8_t)frame.cpu.general.ecx);
@@ -203,8 +212,7 @@ void syscall(struct InterruptFrame frame) {
             printAllFind((char*)frame.cpu.general.ebx,(char*)frame.cpu.general.ecx);
             break;
         case 10:
-            struct ProcessControlBlock* cur_run = process_get_current_running_pcb_pointer();
-            process_destroy(cur_run->metadata.pid);
+            process_destroy(1);
             break;
         case 11:
             *((int32_t*) frame.cpu.general.ecx) = findCluster(
@@ -215,12 +223,41 @@ void syscall(struct InterruptFrame frame) {
             read_clusters((void*)frame.cpu.general.ebx,frame.cpu.general.ecx,1);
             break;
         case 13:
-            process_create_user_process(*(struct FAT32DriverRequest*) frame.cpu.general.ebx);
+            *(uint32_t*)frame.cpu.general.ecx = process_create_user_process(*(struct FAT32DriverRequest*) frame.cpu.general.ebx);
             break;
         case 14:
             process_destroy(frame.cpu.general.ebx);
-            scheduler_switch_to_next_process();
             break;
+        case 15:
+            getActivePCB((struct ProcessControlBlock*)frame.cpu.general.ebx,(int*)frame.cpu.general.ecx);
+            break;
+        case 16:
+            *((uint8_t*)frame.cpu.general.ebx+0) = cmos_read(0x04);
+            *((uint8_t*)frame.cpu.general.ebx+1) = cmos_read(0x02);
+            *((uint8_t*)frame.cpu.general.ebx+2) = cmos_read(0x00);
+            break;
+        case 17:
+            clear_command();
+            break;
+        case 18:
+            update_shell_dir(frame.cpu.general.ebx,(char*)frame.cpu.general.ecx,(bool)frame.cpu.general.edx);
+            break;
+        case 19:
+            *(int*)frame.cpu.general.ebx = get_shell_cluster();
+            break;
+        case 20:
+            *(int*) frame.cpu.general.ebx=(cwd_table.table[1].cluster_high<<16)|(cwd_table.table[1].cluster_low);
+            break;
+        case 21:
+            copy_dir((char*)frame.cpu.general.ebx);
+            break;
+        case 22:
+            *(struct FAT32DirectoryTable*)frame.cpu.general.ebx = get_cwd_table();
+            break;
+        case 23:
+            for(int i=0;i<9;i++){
+                write_exact_loc(23,70+i,*((char*)frame.cpu.general.ebx+i),0xF,0);
+            }
     }
 }
 
@@ -235,8 +272,16 @@ void main_interrupt_handler(struct InterruptFrame frame)
     case (PIC1_OFFSET + IRQ_KEYBOARD):
         keyboard_isr();
         break;
-    case (PIC2_OFFSET + IRQ_TIMER):
-        scheduler_switch_to_next_process();
+    case (PIC1_OFFSET + IRQ_TIMER):
+        if(process_manager_state.active_process_count>1){
+            struct Context ctx = {
+                .cpu = frame.cpu,
+                .eflags = frame.int_stack.eflags,
+                .eip = frame.int_stack.eip,
+            };
+            scheduler_save_context_to_current_running_pcb(ctx);
+            scheduler_switch_to_next_process();
+        }
         break;
     case (SYSCALL):
         syscall(frame);

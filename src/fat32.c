@@ -6,6 +6,14 @@
 
 static struct FAT32DriverState fat32_driver_state;
 
+struct ShellState shell_state = {
+    .cur_dir = "Root/",
+    .idx = 5,
+    .cur_cluster = 2,
+};
+
+struct FAT32DirectoryTable cwd_table;
+
 const uint8_t fs_signature[BLOCK_SIZE] = {
     'C',
     'o',
@@ -90,6 +98,57 @@ const uint8_t fs_signature[BLOCK_SIZE] = {
     [BLOCK_SIZE - 2] = 'O',
     [BLOCK_SIZE - 1] = 'k',
 };
+
+void removePath(){
+    shell_state.idx--;
+    shell_state.cur_dir[shell_state.idx] = '\0';
+    while(shell_state.cur_dir[shell_state.idx-1]!='/'){
+        shell_state.idx--;
+        shell_state.cur_dir[shell_state.idx]='\0';
+    }
+}
+
+void addPath(char *new_add){
+    int idx = 0;
+    while(new_add[idx]!='\0'){
+        shell_state.cur_dir[shell_state.idx] = new_add[idx];
+        idx++;
+        shell_state.idx++;
+    }
+    shell_state.cur_dir[shell_state.idx] = '/';
+    shell_state.idx++;
+}
+
+void update_shell_dir(int cluster,char* path,bool addDir){
+    read_clusters(&cwd_table,cluster,1);
+    shell_state.cur_cluster = cluster;
+    char empty[1] = "";
+    if(addDir){
+        if(memcmp(path,empty,sizeof(char))==0){
+            return;
+        }   
+        addPath(path);
+    }else{
+        removePath();
+    }
+}
+
+int get_shell_cluster(){
+    return shell_state.cur_cluster;
+}
+
+void copy_dir(char* dir){
+    for(int i=0;i<shell_state.idx;i++){
+        dir[i] = shell_state.cur_dir[i];
+    }
+    for(int i=shell_state.idx;i<100;i++){
+        dir[i] = '\0';
+    }
+}
+
+struct FAT32DirectoryTable get_cwd_table(){
+    return cwd_table;
+}
 
 uint32_t cluster_to_lba(uint32_t cluster)
 {

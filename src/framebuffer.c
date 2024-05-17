@@ -49,6 +49,13 @@ void framebuffer_write(uint8_t row, uint8_t col, char c, uint8_t fg, uint8_t bg)
     }
 }
 
+void write_exact_loc(uint8_t row, uint8_t col, char c, uint8_t fg, uint8_t bg){
+    size_t loc = (row * 80 + col) * 2; // Menghitung posisi karakter c
+    uint8_t color = (bg << 4) | (fg & 0X0F); // Memberi warna dan warna background pada karakter c
+    FRAMEBUFFER_MEMORY_OFFSET[loc] = c;
+    FRAMEBUFFER_MEMORY_OFFSET[loc + 1] = color;
+}
+
 
 void framebuffer_set_cursor(uint8_t r, uint8_t c) {
     /*

@@ -11,6 +11,16 @@ struct ProcessState process_manager_state = {
     .total_pid = 0,
 };
 
+void getActivePCB(struct ProcessControlBlock* ptr,int* count){
+    *count = 0;
+    for(int i=0;i<PROCESS_COUNT_MAX;i++){
+        if(_process_list[i].metadata.active){    
+            ptr[*count]=_process_list[i];
+            (*count)++;
+        }
+    }
+}
+
 int process_list_get_inactive_index(){
     if(process_manager_state.active_process_count==0){
         return 0;
@@ -19,13 +29,13 @@ int process_list_get_inactive_index(){
     if(idx==-1){
         idx = PROCESS_COUNT_MAX-1;
     }
-    while(_process_list[idx].metadata.active==false){
+    while(_process_list[idx].metadata.active==true){
         idx--;
         if(idx==-1){
             idx = PROCESS_COUNT_MAX-1;
         }
     }
-    return (idx==PROCESS_COUNT_MAX-1)? 0 : idx+1;
+    return idx;
 
 }
 int process_generate_new_pid(){
@@ -87,18 +97,18 @@ int32_t process_create_user_process(struct FAT32DriverRequest request) {
     // Process PCB 
     int32_t p_index = process_list_get_inactive_index();
     struct ProcessControlBlock *new_pcb = &(_process_list[p_index]);
-
+    memcpy(new_pcb->metadata.name,request.name,8*sizeof(char));
     struct PageDirectory* cur_active = paging_get_current_page_directory_addr();
     new_pcb->context.page_directory_virtual_addr = paging_create_new_page_directory();
     paging_use_page_directory(new_pcb->context.page_directory_virtual_addr);
 
     for(uint32_t i=0;i<page_frame_count_needed;i++){
         new_pcb->memory.virtual_addr_used[i] = request.buf+i*PAGE_FRAME_SIZE;
+        paging_allocate_user_page_frame(new_pcb->context.page_directory_virtual_addr,new_pcb->memory.virtual_addr_used[i]);
     }
     new_pcb->memory.page_frame_used_count = page_frame_count_needed;
-
-    paging_allocate_user_page_frame(new_pcb->context.page_directory_virtual_addr,request.buf);
     read(request);
+    new_pcb->context.eip = (uint32_t)request.buf;
     paging_use_page_directory(cur_active);
 
     new_pcb->context.eflags |= CPU_EFLAGS_BASE_FLAG | CPU_EFLAGS_FLAG_INTERRUPT_ENABLE;
@@ -110,6 +120,7 @@ int32_t process_create_user_process(struct FAT32DriverRequest request) {
     new_pcb->metadata.pid = process_generate_new_pid();
     new_pcb->metadata.active = true;
     new_pcb->metadata.cur_state = READY;
+    process_manager_state.active_process_count++;
 exit_cleanup:
     return retcode;
 }
@@ -141,9 +152,8 @@ bool process_destroy(uint32_t pid) {
             }
 
             // release pcb;
-            int idx = process_manager_state.cur_idx;
-            if(idx==i){
-                process_manager_state.cur_idx = -1;
+            if(process_manager_state.active_process_count==1){
+                asm volatile ("outw %0, %1" : : "a"((uint16_t)0x2000), "Nd"((uint16_t)0x604));
             }
 
             _process_list[i].metadata.active = false;

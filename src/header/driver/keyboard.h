@@ -41,8 +41,13 @@ struct KeyboardDriverState {
 } __attribute((packed));
 
 
+void add_command(char c);
 
+void get_command(char commandShell[100],int *idxShell);
 
+void clear_command();
+
+void delete_command();
 
 /* -- Driver Interfaces -- */
 
