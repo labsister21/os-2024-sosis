@@ -59,7 +59,7 @@
 
 // TERAKHIT COMMIT ===================================================================================================
 
-void splash_screen(){
+void init_terminal(){
     framebuffer_clear();
 
     framebuffer_write(3, 28, ' ', 0, 0);
@@ -276,15 +276,6 @@ void splash_screen(){
         }
     }
 
-    // int index = 29;
-    // framebuffer_write(16,index,'L',0xF,0);
-    // framebuffer_write(16,index + 2,'O',0xF,0);
-    // framebuffer_write(16,index + 4,'A',0xF,0);
-    // framebuffer_write(16,index + 6,'D',0xF,0);
-    // framebuffer_write(16,index + 8,'I',0xF,0);
-    // framebuffer_write(16,index + 10,'N',0xF,0);
-    // framebuffer_write(16,index + 12,'G',0xF,0);
-
     framebuffer_write(18,29,' ',0xF,0);
     framebuffer_write(18,30,'s',0xF,0);
     framebuffer_write(18,31,'O',0xF,0);
@@ -384,26 +375,6 @@ void splash_screen(){
                 framebuffer_write(i, j, ' ', 0, 0x2);
                 framebuffer_write(i, j, ' ', 0, 0x2);
                 framebuffer_write(i, j, ' ', 0, 0x2);
-                // if (n % delay == 0){
-                //     if (temp == 1){
-                //         framebuffer_write(16,index + 14,'.',0xF,0);
-                //         temp ++;
-                //     }
-                //     else if (temp == 2){
-                //         framebuffer_write(16,index + 16,'.',0xF,0);
-                //         temp ++;
-                //     }
-                //     else if (temp == 3){
-                //         framebuffer_write(16,index + 18,'.',0xF,0);
-                //         temp ++;
-                //     }
-                //     else{
-                //         framebuffer_write(16,index + 14,' ',0xF,0);
-                //         framebuffer_write(16,index + 16,' ',0xF,0);
-                //         framebuffer_write(16,index + 18,' ',0xF,0);
-                //         temp = 1;
-                //     }
-                // }
             }
         }
     }
@@ -419,7 +390,7 @@ void kernel_setup(void) {
     initialize_filesystem_fat32();
     gdt_install_tss();
     set_tss_register();
-    splash_screen();
+    init_terminal();
     framebuffer_clear();
     framebuffer_set_cursor(0, 0);
 
@@ -432,23 +403,6 @@ void kernel_setup(void) {
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size           = 0x100000,
     };
-    uint8_t arr1[CLUSTER_SIZE+1] = {
-    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
-    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
-    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
-    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
-    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-','\n','2', '0', '2', '4', '\n',
-    [CLUSTER_SIZE-1] = '1',
-    [CLUSTER_SIZE] = '2',
-    };
-    struct FAT32DriverRequest requestWRITE1 = {
-        .buf                   = arr1,
-        .name                  = "file1",
-        .ext                   = "",
-        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
-        .buffer_size           = CLUSTER_SIZE+1,
-    } ;
-    write(requestWRITE1);
 
     // Set TSS.esp0 for interprivilege interrupt
     set_tss_kernel_current_stack();
