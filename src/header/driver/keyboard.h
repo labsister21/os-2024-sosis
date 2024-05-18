@@ -13,9 +13,14 @@
 
 #define KEYBOARD_DATA_PORT     0x60
 #define EXTENDED_SCANCODE_BYTE 0xE0
+
 #define CAPSLOCK_SCANCODE      0x3A
 #define LEFT_SHIFT_SCANCODE    0x2A
 #define RIGHT_SHIFT_SCANCODE   0x36
+#define LEFT_SHIFT_RELEASE_SCANCODE 0xAA
+#define RIGHT_SHIFT_RELEASE_SCANCODE 0xB6
+#define CTRL_SCANCODE          0x1D
+#define CTRL_RELEASE_SCANCODE   0x9D
 
 
 /**
@@ -37,7 +42,9 @@ struct KeyboardDriverState {
     bool read_extended_mode;
     bool keyboard_input_on;
     char keyboard_buffer;
-    
+    bool capslock_on;
+    bool shift_on;
+    bool ctrl_on;    
 } __attribute((packed));
 
 

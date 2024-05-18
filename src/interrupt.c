@@ -20,13 +20,12 @@ void activate_timer_interrupt(void) {
     out(PIC1_DATA, in(PIC1_DATA) & ~(1 << IRQ_TIMER));
 }
 
-void io_wait(void)
-{
+
+void io_wait(void) {
     out(0x80, 0);
 }
 
-void pic_ack(uint8_t irq)
-{
+void pic_ack(uint8_t irq) {
     if (irq >= 8)
     {
         out(PIC2_COMMAND, PIC_ACK);
@@ -34,8 +33,7 @@ void pic_ack(uint8_t irq)
     out(PIC1_COMMAND, PIC_ACK);
 }
 
-void pic_remap(void)
-{
+void pic_remap(void) {
     // Starts the initialization sequence in cascade mode
     out(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     io_wait();
@@ -60,19 +58,20 @@ void pic_remap(void)
     out(PIC2_DATA, PIC_DISABLE_ALL_MASK);
 }
 
-void putchar(char* c,uint8_t textColor){
-    if(*c!='\0')
-    {    
+void putchar(char* c,uint8_t textColor) {
+    if(*c!='\0') {    
         if (*c == '\n') { // Enter
-            if (cursor_row < 25) {
-                cursor_row++;
-                cursor_col = 0;
+            cursor_row++;
+            cursor_col = 0;
+            if (cursor_row >= TERMINAL_HEIGHT) {
+                framebuffer_auto_down();
+                cursor_row = TERMINAL_HEIGHT - 1;
             }
             framebuffer_set_cursor(cursor_row, cursor_col);
         }
         else if (*c == '\t') { // Tab
             for(int i = 0; i < 4; i++) {
-                if (cursor_col > 79) {
+                if (cursor_col >= TERMINAL_WIDTH) {
                     cursor_col = 0;
                     cursor_row++;
                 }
@@ -83,7 +82,7 @@ void putchar(char* c,uint8_t textColor){
         }
         else if (*c == '\b') { // Backspace
             if (cursor_row > 0 && cursor_col == 0) {
-                cursor_col = 79;
+                cursor_col = TERMINAL_WIDTH - 1;
                 cursor_row--;
                 framebuffer_write(cursor_row, cursor_col,' ', 0xF, 0x0);
                 framebuffer_set_cursor(cursor_row, cursor_col);
@@ -94,12 +93,11 @@ void putchar(char* c,uint8_t textColor){
                 framebuffer_set_cursor(cursor_row, cursor_col);
             }
         }
-        else if (*c == '\0')
-        {
+        else if (*c == '\0') {
             // does nothing
         }
         else { // Regular char
-            if (cursor_col > 79) {
+            if (cursor_col >= TERMINAL_WIDTH) {
                 cursor_col = 0;
                 cursor_row++;
             }
@@ -111,11 +109,16 @@ void putchar(char* c,uint8_t textColor){
     }
 }
 
-void puts(char* ebx,uint32_t ecx,uint32_t edx){
-    for(int i=0;i<(int)ecx;i++){
-        putchar(ebx+i,edx);
+void puts(char* ebx, uint32_t ecx, uint32_t edx) {
+    for (int i = 0; i < (int)ecx; i++) {
+        putchar(ebx + i, edx);
+        if (cursor_row >= TERMINAL_HEIGHT) {
+            framebuffer_auto_down();
+            cursor_row = TERMINAL_HEIGHT - 1;
+        }
     }
 }
+
 
 void printDirPath(int cluster){
     int current_cluster = cluster,parent_cluster;

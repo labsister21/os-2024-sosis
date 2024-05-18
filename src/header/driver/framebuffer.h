@@ -25,6 +25,9 @@
 extern uint8_t cursor_col;
 extern uint8_t cursor_row;
 
+extern uint16_t view_row_start;
+extern uint8_t max_written_row;
+
 /**
  * Set framebuffer character and color with corresponding parameter values.
  * More details: https://en.wikipedia.org/wiki/BIOS_color_attributes
@@ -61,6 +64,8 @@ void framebuffer_scroll_up(void);
 
 void framebuffer_scroll_down(void);
 
-void handle_key_press(uint8_t scancode);
+void framebuffer_auto_down(void);
+
+uint16_t framebuffer_get_cursor(void);
 
 #endif

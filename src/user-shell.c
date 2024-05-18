@@ -1035,19 +1035,19 @@ int main(void) {
 
         if (strcmp2(cmdtyped, "rm")) {
             rm(command);
-            puts("command found", 0x07);
+            // puts("command found", 0x07);
         }
         else if (strcmp2(cmdtyped, "cp")) {
             cp(command);
-            puts("command found", 0x07);
+            // puts("command found", 0x07);
         }   
         else if (strcmp2(cmdtyped, "mkdir")) {
             mkdir(command);
-            puts("command found", 0x07);
+            // puts("command found", 0x07);
         }
         else if (strcmp2(cmdtyped, "mv")) {
             mv(command);
-            puts("command found", 0x07);
+            // puts("command found", 0x07);
         }
         else if (strcmp2(cmdtyped,"find")) {
             findShell(command);
@@ -1060,7 +1060,7 @@ int main(void) {
         }
         else if (strcmp2(cmdtyped, "ls")) {
             ls();
-            puts("\ncommand found", 0x07);
+            // puts("\ncommand found", 0x07);
         }
         else if(strcmp2(cmdtyped,"cat")){
             cat(command);
