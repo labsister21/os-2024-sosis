@@ -156,17 +156,13 @@ void keyboard_isr(void) {
             if (cursor_row > 0) {
                 cursor_row--;
                 framebuffer_set_cursor(cursor_row, cursor_col);
-            } else if (view_row_start > 0) {
-                framebuffer_scroll_up();
             }
             return;
         } else if (scancode == EXT_SCANCODE_DOWN) {
             if (cursor_row < TERMINAL_HEIGHT - 1) {
                 cursor_row++;
                 framebuffer_set_cursor(cursor_row, cursor_col);
-            } else if (view_row_start < BUFFER_HEIGHT - TERMINAL_HEIGHT) {
-                framebuffer_scroll_down();
-            }
+            } 
             return;
         } else if (scancode == EXT_SCANCODE_RIGHT && !(cursor_row == TERMINAL_HEIGHT - 1 && cursor_col == TERMINAL_WIDTH - 1)) {
             if (cursor_col == TERMINAL_WIDTH - 1) {

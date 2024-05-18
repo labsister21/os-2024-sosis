@@ -30,6 +30,19 @@
  * By default, QEMU using scancode set 1 (from empirical testing)
  */
 extern const char keyboard_scancode_1_to_ascii_map[256];
+extern const char keyboard_scancode_caps_to_ascii_map[256];
+extern const char keyboard_scancode_shift_to_ascii_map[256];
+
+#define MAX_COMMAND_LENGTH 100
+extern char display_command_buffer;
+extern bool display_command_pending;
+
+#define MAX_HISTORY 10
+extern char command_history; // Array to store history
+extern int current_history_index;         // Index of the current command in history
+extern int total_history_count;            // Total commands in history
+extern int viewing_history_index;         // Index for navigating history
+
 
 /**
  * KeyboardDriverState - Contain all driver states

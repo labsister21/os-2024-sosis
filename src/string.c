@@ -41,3 +41,19 @@ void *memmove(void *dest, const void *src, size_t n) {
 
     return dest;
 }
+
+size_t strlen(const char *str) {
+    size_t len = 0;
+    while (str[len])
+        len++;
+    return len;
+}
+
+char *strcpy(char *dest, const char *src) {
+    size_t i;
+    for (i = 0; src[i] != '\0'; i++) {
+        dest[i] = src[i];
+    }
+    dest[i] = '\0';
+    return dest;
+}

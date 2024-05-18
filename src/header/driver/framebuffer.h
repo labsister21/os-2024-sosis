@@ -11,7 +11,6 @@
 
 #define TERMINAL_HEIGHT 25
 #define TERMINAL_WIDTH 80
-#define BUFFER_HEIGHT 200
 
 
 /**
@@ -25,8 +24,6 @@
 extern uint8_t cursor_col;
 extern uint8_t cursor_row;
 
-extern uint16_t view_row_start;
-extern uint8_t max_written_row;
 
 /**
  * Set framebuffer character and color with corresponding parameter values.
@@ -57,12 +54,6 @@ void write_exact_loc(uint8_t row, uint8_t col, char c, uint8_t fg, uint8_t bg);
  *
  */
 void framebuffer_clear(void);
-
-void framebuffer_update_view(void);
-
-void framebuffer_scroll_up(void);
-
-void framebuffer_scroll_down(void);
 
 void framebuffer_auto_down(void);
 
