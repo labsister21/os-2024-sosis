@@ -78,6 +78,23 @@ void kernel_setup(void) {
         .parent_cluster_number = ROOT_CLUSTER_NUMBER,
         .buffer_size           = 0x100000,
     };
+    uint8_t arr1[CLUSTER_SIZE+1] = {
+    'C', 'o', 'u', 'r', 's', 'e', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ',
+    'D', 'e', 's', 'i', 'g', 'n', 'e', 'd', ' ', 'b', 'y', ' ', ' ', ' ', ' ',  ' ',
+    'L', 'a', 'b', ' ', 'S', 'i', 's', 't', 'e', 'r', ' ', 'I', 'T', 'B', ' ',  ' ',
+    'M', 'a', 'd', 'e', ' ', 'w', 'i', 't', 'h', ' ', '<', '3', ' ', ' ', ' ',  ' ',
+    '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-','\n','2', '0', '2', '4', '\n',
+    [CLUSTER_SIZE-1] = '1',
+    [CLUSTER_SIZE] = '2',
+    };
+    struct FAT32DriverRequest requestWRITE1 = {
+        .buf                   = arr1,
+        .name                  = "file1",
+        .ext                   = "",
+        .parent_cluster_number = ROOT_CLUSTER_NUMBER,
+        .buffer_size           = CLUSTER_SIZE+1,
+    } ;
+    write(requestWRITE1);
 
     // Set TSS.esp0 for interprivilege interrupt
     set_tss_kernel_current_stack();
