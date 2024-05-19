@@ -226,38 +226,49 @@ void syscall(struct InterruptFrame frame) {
             read_clusters((void*)frame.cpu.general.ebx,frame.cpu.general.ecx,1);
             break;
         case 13:
+            // Create New Process
             *(uint32_t*)frame.cpu.general.ecx = process_create_user_process(*(struct FAT32DriverRequest*) frame.cpu.general.ebx);
             break;
         case 14:
+            // Destroy Process
             process_destroy(frame.cpu.general.ebx);
             break;
         case 15:
+            // Get List Active PCB
             getActivePCB((struct ProcessControlBlock*)frame.cpu.general.ebx,(int*)frame.cpu.general.ecx);
             break;
         case 16:
+            // Read CMOS Clock
             *((uint8_t*)frame.cpu.general.ebx+0) = cmos_read(0x04);
             *((uint8_t*)frame.cpu.general.ebx+1) = cmos_read(0x02);
             *((uint8_t*)frame.cpu.general.ebx+2) = cmos_read(0x00);
             break;
         case 17:
+            // Empty Command Buffer
             clear_command();
             break;
         case 18:
+            // Update current shell directory
             update_shell_dir(frame.cpu.general.ebx,(char*)frame.cpu.general.ecx,(bool)frame.cpu.general.edx);
             break;
         case 19:
+            // Get current shell directory cluster
             *(int*)frame.cpu.general.ebx = get_shell_cluster();
             break;
         case 20:
+            // Get parent directory cluster number
             *(int*) frame.cpu.general.ebx=(cwd_table.table[1].cluster_high<<16)|(cwd_table.table[1].cluster_low);
             break;
         case 21:
+            // Get current path directory
             copy_dir((char*)frame.cpu.general.ebx);
             break;
         case 22:
+            // Get current directory FAT32Directory
             *(struct FAT32DirectoryTable*)frame.cpu.general.ebx = get_cwd_table();
             break;
         case 23:
+            // Write Framebuffer without inserting to buffer terminal
             for(int i=0;i<9;i++){
                 write_exact_loc(23,70+i,*((char*)frame.cpu.general.ebx+i),0xF,0);
             }
