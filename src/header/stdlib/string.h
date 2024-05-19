@@ -52,9 +52,28 @@ int memcmp(const void *s1, const void *s2, size_t n);
 */
 void *memmove(void *dest, const void *src, size_t n);
 
-size_t strlen(const char *str);
+int strlen(const char *str);
 
 char *strcpy(char *dest, const char *src);
 
+int strcmp(const char *str1, const char *str2);
+
+int strncmp(const char *str1, const char *str2, uint16_t n);
+
+char *strtok(char *str, const char *delim);
+
+void addTrailingNull(char *str, uint16_t start, uint16_t end);
+
+int parseFileName(char *filename, char *name, char *ext);
+
+int countWords(const char* str);
+
+int wordLen(const char* str, uint16_t idx);
+
+void getWord(const char* str, uint16_t idx, char* buf);
+
+char* custom_strtok(char* str, const char* delim);
+
+int string_to_int(const char *str);
 
 #endif
