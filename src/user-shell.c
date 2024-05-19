@@ -838,7 +838,7 @@ void cd(char *command){
         .buf = &table_buf,
         .name = "\0\0\0\0\0\0\0",
         .ext = "\0\0",
-        .parent_cluster_number = cur_cluster, // could be a variable
+        .parent_cluster_number = cur_cluster,
         .buffer_size = sizeof(struct FAT32DirectoryTable)
     };
     memcpy2(request.name, name, 8);
@@ -846,7 +846,7 @@ void cd(char *command){
 
     int retcode;
     syscall(1,(uint32_t)&request,(uint32_t)&retcode,0);
-    if(retcode==-9999){
+    if(retcode==2){
         puts("Tidak ditemukan direktori dengan nama tersebut!\n",0xF);
     }else if(retcode==1){
         puts("Input anda bukanlah sebuah direktori!\n",0xF);
@@ -948,7 +948,7 @@ void exec(char* command){
     if(retcode == 1){
         puts("Jumlah proses telah mencapai batas maksimal!\n",0xF);
     }else if(retcode == 2){
-        puts("Entrypoint Invalid!\n",0xF);
+        puts("Entrypoint Virtual Addr Invalid!\n",0xF);
     }else if(retcode == 3){
         puts("Memory tidak cukup!\n",0xF);
     }else{
