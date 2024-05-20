@@ -890,6 +890,7 @@ void kill(char* command){
         if(list_pcb[i].metadata.pid==(uint32_t)pid){
             if(list_pcb[i].metadata.active){
                 syscall(14,pid,0,0);
+                puts("Process Destroy Successful\n\n",0x07);
                 return;
             }
         }
