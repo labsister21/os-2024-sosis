@@ -159,6 +159,7 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
         if (retcode != 0){
             puts("Error: ",0x04);
             puts("Error writing to file", 0x07);
+            puts_integer(retcode);
         }
     }
 
@@ -463,6 +464,56 @@ void mkdir(char *command) {
         puts("\n", 0x07);
     }
 }
+void getDir(char* path, char res[8],char delimiter,int *idx){
+    int i = *idx,length=0;
+    while(path[i]!=delimiter && path[i]!='\0'){
+        res[length] = path[i];
+        i++;
+        length+=1;
+    }
+    *idx = i+=1;
+    for(int j=length;j<8;j++){
+        res[j] = '\0';
+    }
+}
+
+int countPath(char* path){
+    int count = 0,i=0;
+    while(path[i]!='\0'){
+        if(path[i]=='/'){
+            count++;
+        }
+        i++;
+    }
+    return count+1;
+}
+
+int getLastCluster(char* path){
+    int last_cluster;
+    int lastIdx = 0,nPath = countPath(path);
+    char dir[8];
+
+    syscall(19,(uint32_t)&last_cluster,0,0);
+    getDir(path,dir,'/',&lastIdx);
+
+    for(int i=0;i<nPath;i++){
+        struct FAT32DriverRequest request = {
+            .buf = NULL,
+            .name = "\0\0\0\0\0\0\0\0",
+            .ext = "\0\0\0",
+            .parent_cluster_number = last_cluster,
+            .buffer_size = 0,
+        };
+        puts_integer(last_cluster);
+        puts("\n",0xF);
+        memcpy(request.name, dir, 8);
+        syscall(11,(uint32_t)&request,(uint32_t)&last_cluster,0);
+        getDir(path,dir,'/',&lastIdx);
+    }
+    puts_integer(last_cluster);
+    puts("\n",0xF);
+    return last_cluster;
+}
 
 void mv(char* command) {
     uint16_t n_words = countWords(command);
@@ -475,12 +526,11 @@ void mv(char* command) {
     int cur_cluster = 2;
     syscall(19,(uint32_t)&cur_cluster,0,0);
 
-    char source_filename[12];
-    char destination_filename[12];
+    char source_filename[12],pathDest[100];
     getWord(command, 1, source_filename);
-    getWord(command, 2, destination_filename);
+    getWord(command, 2, pathDest);
 
-    char source_name[9], source_ext[4], dest_name[9], dest_ext[4];
+    char source_name[9], source_ext[4];
 
     if (parseFileName(source_filename, source_name, source_ext)) {
         puts("Error: ",0x04);
@@ -488,14 +538,14 @@ void mv(char* command) {
         puts(": Invalid source file name or extension.\n", 0x07);
         return;
     }
-    if (parseFileName(destination_filename, dest_name, dest_ext)) {
+    int dest_cluster = getLastCluster(pathDest);
+    if(dest_cluster==9999){
         puts("Error: ",0x04);
-        puts(destination_filename, 0x07);
-        puts(": Invalid destination file name or extension.\n", 0x07);
-        return;
+        puts(source_filename, 0x07);
+        puts("Invalid Destination Path.\n", 0x07);
     }
-
-    copy(source_name, source_ext, cur_cluster, dest_name, dest_ext, cur_cluster);
+    puts_integer(dest_cluster);
+    copy(source_name, source_ext, cur_cluster, source_name, source_ext, dest_cluster);
 
     if (copy_status == 0) {  // '0' is success
         remove(source_name, source_ext,cur_cluster);
