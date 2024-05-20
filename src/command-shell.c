@@ -634,9 +634,9 @@ void mvPath(char* command){
         traverseFolder(clusterFolder,dest_cluster,1);
     }
     if (copy_status == 0) {  // '0' is success
-        puts("Copy successful.\n", 0x07);
+        puts("Move successful.\n", 0x07);
     } else {
-        puts("Copy failed: unable to verify copy.\n", 0x07);
+        puts("Move failed: unable to verify copy.\n", 0x07);
     }
 }
 
