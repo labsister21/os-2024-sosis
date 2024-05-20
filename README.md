@@ -1,5 +1,11 @@
 <h1 align="middle"> SOSIS</h1>
 <img src="image.jpg">
+
+## How to run
+```
+make run
+```
+
                                         
 ## Contributors
 |   NIM    |                  Nama                  |
