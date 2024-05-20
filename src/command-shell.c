@@ -82,7 +82,7 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
     struct FAT32DirectoryTable src_table;
     uint32_t src_cluster_number;
     struct FAT32DirectoryTable src_parent_table;
-    syscall(99, (uint32_t)&src_parent_table, src_parent_number, 0);
+    syscall(12, (uint32_t)&src_parent_table, src_parent_number, 0);
     
     for (int32_t i = 0; i < (int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++) {
         // puts("aaa", 0x07);
@@ -136,7 +136,7 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
         uint32_t target_cluster_number;
         struct FAT32DirectoryTable target_parent_table;
 
-        syscall(7, (uint32_t)&target_parent_table, target_parent_number, 0);
+        syscall(12, (uint32_t)&target_parent_table, target_parent_number, 0);
 
         for (int32_t i = 0; i < (int32_t)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry)); i++) {
             if (memcmp(target_parent_table.table[i].name, target_name, 8) == 0 &&
@@ -156,8 +156,10 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
         memcpy(request.ext, target_ext, 3);
         request.parent_cluster_number = target_parent_number;
         syscall(2, (uint32_t)&request, (uint32_t)&retcode, 0);
-        if (retcode != 0)
+        if (retcode != 0){
+            puts("Error: ",0x04);
             puts("Error writing to file", 0x07);
+        }
     }
 
     if (true) {  
@@ -169,6 +171,11 @@ void copy(char* src_name, char* src_ext, uint32_t src_parent_number, char* targe
 
 void cp(char* command) {
     uint16_t n_words = countWords(command);
+    if (n_words != 3) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\ncp <source_file> <dest_filen>\n", 0x07);
+        return;
+    }
     int16_t recursive = -1;
     int8_t retcode = 0;
     struct FAT32DirectoryTable cwd = {0};
@@ -193,6 +200,7 @@ void cp(char* command) {
     if ((recursive == -1 && n_words < 3) || (recursive != -1 && n_words < 4)) {
         // puts("hi", 0x07);
         // puts((char*) recursive, 0x07);
+        puts("Error: ",0x04);
         puts(": missing file operands\n", 0x07);
         return;
     }
@@ -207,6 +215,7 @@ void cp(char* command) {
     getWord(command, target_idx, target_filename);
 
     if (2 == 2 && strcmp(target_filename, "..")) {
+        puts("Error: ",0x04);
         puts("root folder does not have parent\n", 0x07);
         return;
     }
@@ -217,6 +226,7 @@ void cp(char* command) {
         getWord(command, i, filename);
 
         if (strcmp(filename, "..")) {
+            puts("Error: ",0x04);
             puts("cannot copy a directory, '..', into itself\n", 0x07);
             return;
         }
@@ -226,8 +236,9 @@ void cp(char* command) {
 
         // if filename is too long
         if (parseFileName(filename, name, ext)) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": filename invalid, name or extension may be too long\n", 0x07);
+            puts(" filename invalid, name or extension may be too long\n", 0x07);
             return;
         }
 
@@ -235,18 +246,21 @@ void cp(char* command) {
         memcpy(request.ext, ext, 3);
         syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
         if (retcode == 2) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": file not found\n", 0x07);
+            puts(" file not found\n", 0x07);
             return;
         }
         if (retcode == 0 && recursive == -1) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": is a directory;  -r not specified\n", 0x07);
+            puts(" is a directory;  -r not specified\n", 0x07);
             return;
         }
         if (retcode == 0 && strcmp(target_filename, "..") && memcmp(name, cwd.table[0].name, 8) == 0) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": cannot copy into itself\n", 0x07);
+            puts("cannot copy into itself\n", 0x07);
             return;
         } 
     }
@@ -257,8 +271,9 @@ void cp(char* command) {
         retcode = 0;
     } else {
         if (parseFileName(target_filename, target_name, target_ext)) {
+            puts("Error: ",0x04);
             puts(target_filename, 0x07);
-            puts(": filename invalid, name or extension may be too long\n", 0x07);
+            puts(" filename invalid, name or extension may be too long\n", 0x07);
             return;
         }
 
@@ -294,8 +309,9 @@ void cp(char* command) {
         }
     } else if (retcode == 1 || retcode == 2) {
         if ((recursive == -1 && n_words > 3) || (recursive != -1 && n_words > 4)) {
+            puts("Error: ",0x04);
             puts(target_filename, 0x07);
-            puts(": is not a folder\n", 0x07);
+            puts(" is not a folder\n", 0x07);
             return;
         } else {
             for (int16_t i = 1; i < n_words; i++) {
@@ -308,11 +324,20 @@ void cp(char* command) {
                 copy(name, ext, 2, target_name, target_ext, 2);
             }
         }
+        int cur_cluster = 2;
+        syscall(19,(uint32_t)&cur_cluster,0,0);
+        syscall(18,(uint32_t)cur_cluster,(uint32_t)"",(uint32_t)true);
     }
+    
 }
 
 void rm(char* command) {
     uint16_t n_words = countWords(command);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nrm <file/folder>\n", 0x07);
+        return;
+    }
     int16_t recursive = -1;
     int8_t retcode = 0;
 
@@ -336,6 +361,7 @@ void rm(char* command) {
     }
 
     if ((recursive == -1 && n_words < 2) || (recursive != -1 && n_words < 3)) {
+        puts("Error: ",0x04);
         puts(": missing file operands\n", 0x07);
         return;
     }
@@ -360,13 +386,15 @@ void rm(char* command) {
         memcpy(request.ext, ext, 3);
         syscall(1, (uint32_t)&request, (uint32_t)&retcode, 0);
         if (retcode == 2) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": file not found\n", 0x07);
+            puts(" not found\n", 0x07);
             return;
         }
         if (retcode == 0 && recursive == -1) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": is a directory;  -r not specified\n", 0x07);
+            puts(" is a directory;  -r not specified\n", 0x07);
             return;
         }
     }
@@ -381,8 +409,9 @@ void rm(char* command) {
 
         // if filename is too long
         if (parseFileName(filename, name, ext)) {
+            puts("Error: ",0x04);
             puts(filename, 0x07);
-            puts(": filename invalid, name or extension may be too long\n", 0x07);
+            puts(" filename invalid, name or extension may be too long\n", 0x07);
             return;
         }
 
@@ -393,10 +422,12 @@ void rm(char* command) {
 
 void mkdir(char *command) {
     uint16_t n_words = countWords(command);
-    if (n_words < 2) {
-        puts("mkdir: missing operand\n", 0x07);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nmkdir <dir_name>\n", 0x07);
         return;
     }
+
     int cur_cluster = 2;
     syscall(19,(uint32_t)&cur_cluster,0,0);
 
@@ -405,8 +436,9 @@ void mkdir(char *command) {
     
     char name[9], ext[4];
     if (parseFileName(filename, name, ext)) {
+        puts("Error: ",0x04);
         puts(filename, 0x07);
-        puts(": invalid directory name\n", 0x07);
+        puts("invalid directory name\n", 0x07);
         return;
     }
 
@@ -435,7 +467,8 @@ void mkdir(char *command) {
 void mv(char* command) {
     uint16_t n_words = countWords(command);
     if (n_words != 3) {
-        puts("Usage: mv <source> <destination>\n", 0x07);
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nmv <source> <destination>\n", 0x07);
         return;
     }
 
@@ -450,11 +483,13 @@ void mv(char* command) {
     char source_name[9], source_ext[4], dest_name[9], dest_ext[4];
 
     if (parseFileName(source_filename, source_name, source_ext)) {
+        puts("Error: ",0x04);
         puts(source_filename, 0x07);
         puts(": Invalid source file name or extension.\n", 0x07);
         return;
     }
     if (parseFileName(destination_filename, dest_name, dest_ext)) {
+        puts("Error: ",0x04);
         puts(destination_filename, 0x07);
         puts(": Invalid destination file name or extension.\n", 0x07);
         return;
@@ -513,15 +548,17 @@ void ls() {
 }
 
 void findShell(char* command){
-    char name[8] = "\0\0\0\0\0\0\0\0", ext[3] = "\0\0\0";
     uint16_t n_words = countWords(command);
-    if(n_words>2){
-        puts("find: excess operand\n",0x07);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nfind <file/folder>\n", 0x07);
         return;
     }
+    char name[8] = "\0\0\0\0\0\0\0\0", ext[3] = "\0\0\0";
     char filename[12];
     getWord(command,1,filename);
     if (parseFileName(filename, name, ext)) {
+        puts("Error: ",0x04);
         puts(filename, 0x07);
         puts(": invalid directory name\n", 0x07);
         return;
@@ -531,6 +568,12 @@ void findShell(char* command){
 }
 
 void cd(char *command){
+    uint16_t n_words = countWords(command);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\ncd <dir_name>\n", 0x07);
+        return;
+    }
     char name[8],ext[3],path[11]="";
     getWord(command,1,path);
 
@@ -538,12 +581,14 @@ void cd(char *command){
     syscall(19,(uint32_t)&cur_cluster,0,0);
 
     if(strcmp(path,"")){
-        puts("Missing argument",0xF);
+        puts("Error: ",0x04);
+        puts("Missing argument",0x07);
         return;
     }
     if(strcmp(path,"..")){
         if(cur_cluster==2){
-            puts("Current directory sudah berada di root!\n",0xF);
+            puts("Error: ",0x04);
+            puts("Current Directory is Already in Root\n",0x07);
             return;
         }
         int parentClus = 0;
@@ -567,9 +612,11 @@ void cd(char *command){
     int retcode;
     syscall(1,(uint32_t)&request,(uint32_t)&retcode,0);
     if(retcode==2){
-        puts("Tidak ditemukan direktori dengan nama tersebut!\n",0xF);
+        puts("Error: ",0x04);
+        puts("Directory Not Found!\n",0xF);
     }else if(retcode==1){
-        puts("Input anda bukanlah sebuah direktori!\n",0xF);
+        puts("Error: ",0x04);
+        puts("Input is not a Directory\n",0xF);
     }else{
         int32_t cluster_cd;
         syscall(11,(uint32_t)&request,(uint32_t)&cluster_cd,0);
@@ -578,6 +625,12 @@ void cd(char *command){
 }
 
 void cat(char* command){
+    uint16_t n_words = countWords(command);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\ncat <file_name>\n", 0x07);
+        return;
+    }
     char name[9],ext[4],filename[12];
     getWord(command,1,filename);
     parseFileName(filename,name,ext);
@@ -595,7 +648,8 @@ void cat(char* command){
         }
     }
     if(idx==-9999){
-        puts("Tidak ada file dengan nama dan ext tersebut!\n",0xF);
+        puts("Error: ",0x04);
+        puts("File not found\n",0x07);
         return;
     }
 
@@ -615,19 +669,22 @@ void cat(char* command){
     memcpy(request.ext, ext, 3);
     int8_t retcode;
     syscall(0, (uint32_t)&request, (uint32_t)&retcode, 0);
-    if (retcode == 0) {
+    if (retcode == 1) {
+        puts("Error: ",0x04);
+        puts(name,0x07);
+        puts(" is a subdirectory\n",0x07);
+    }else {
         puts(buff,0xF);
-    }
-    else {
-        puts("Failed to read file: ", 0x07);
-        puts_integer(retcode);
-        puts("\n", 0x07);
-        puts_integer(request.buffer_size);
-        puts("\n", 0x07);
     }
 }   
 
 void exec(char* command){
+    uint16_t n_words = countWords(command);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nexec <exe_name>\n", 0x07);
+        return;
+    }
     struct FAT32DirectoryTable cwd = {0};
     syscall(22,(uint32_t)&cwd,0,0);
 
@@ -648,7 +705,8 @@ void exec(char* command){
         }
     }
     if(idx==-9999){
-        puts("Tidak ada file dengan nama dan ext tersebut!\n",0xF);
+        puts("Error: ",0x04);
+        puts("File not found\n",0x07);
         return;
     }
 
@@ -666,13 +724,13 @@ void exec(char* command){
     syscall(13,(uint32_t)&request,(uint32_t)&retcode,0);
 
     if(retcode == 1){
-        puts("Jumlah proses telah mencapai batas maksimal!\n",0xF);
+        puts("Error: Number of active process is maximum\n",0x07);
     }else if(retcode == 2){
-        puts("Entrypoint Virtual Addr Invalid!\n",0xF);
+        puts("Error: virtual address entrypoint is not valid\n",0x07);
     }else if(retcode == 3){
-        puts("Memory tidak cukup!\n",0xF);
+        puts("Error: Memory available is not enough\n",0x07);
     }else{
-        puts("Process berhasil dibuat!\n",0xF);
+        puts("Process has been created and active\n",0x07);
     }
 
 }
@@ -699,6 +757,12 @@ void ps(){
 }
 
 void kill(char* command){
+    uint16_t n_words = countWords(command);
+    if (n_words != 2) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nkill <pid>\n", 0x07);
+        return;
+    }
     char pidStr[3] = "\0\0\0";
     getWord(command,1,pidStr); 
     int pid = string_to_int(pidStr);
@@ -714,5 +778,6 @@ void kill(char* command){
             }
         }
     }
-    puts("Tidak ditemukan proses dengan id tersebut!",0xF);
+    puts("Error: ",0x04);
+    puts("No such Process with Match PID\n\n",0x07);
 }
