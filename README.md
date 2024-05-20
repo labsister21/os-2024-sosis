@@ -1,10 +1,9 @@
-# Tugas Besar IF2230 - 2024
-
-> Milestone 1: Pembuatan Sistem Operasi x86, Interrupt, Driver, File System
-
+<h1 align="middle"> SOSIS</h1>
+<img src="image.jpg">
+                                        
 ## Contributors
 |   NIM    |                  Nama                  |
-| :------: | :------------------------------------: |
+| -------- | -------------------------------------- |
 | 13522029 |       Ignatius Jhon Hezkiel Chan       |
 | 13522043 |       Daniel Mulia Putra Manurung      |
 | 13522053 |       Erdianti Wiga Putri Andini       |
@@ -12,7 +11,7 @@
 
 ## Checkpoint
 | Tugas                          | Deskripsi                                                                             | Checklist |
-|:------------------------------:|:-------------------------------------------------------------------------------------:|:---------:|
+| ------------------------------ | ------------------------------------------------------------------------------------- | --------- |
 | Text Framebuffer               | Membuat fungsi untuk menulis pada layar                                               |     V     |
 |                                | Membuat fungsi untuk membersihkan layar                                               |     V     |
 |                                | Membuat fungsi untuk menggerakkan kursor                                              |     V     |
@@ -28,3 +27,14 @@
 |                                | Membuat operasi write pada filesystem                                                 |     V     |
 |                                | Membuat operasi read pada filesystem                                                  |     V     |
 |                                | Membuat operasi delete pada filesystem                                                |     V     |
+| Manajemen memory               | Membuat struktur data paging                                                          |     V     |
+|                                | Memuat kernel pada alamat memori tinggi                                               |     V     |
+|                                | Mengaktifkan paging                                                                   |     V     |
+| Separasi kernel-user space     | Membuat inserter file ke file system                                                  |     V     |
+|                                | Membuat GDT entry untuk user dan Task State Segment                                   |     V     |
+|                                | Membuat alokator memori sederhana                                                     |     V     |     
+|                                | Membuat aplikasi user sederhana                                                       |     V     | 
+|                                | Memasuki user mode pada aplikasi sederhana                                            |     V     |  
+| Shell                          | Membuat system call                                                                   |     V     |
+|                                | Mengembangkan aplikasi sederhana menjadi shell                                        |     V     |
+|                                | Membuat perintah - perintah pada shell                                                |     V     |
