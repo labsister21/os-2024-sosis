@@ -42,7 +42,7 @@ int main(void) {
             rm(command);
         }
         else if (strcmp(cmdtyped, "cp")) {
-            cp(command);
+            copyPath(command);
         }   
         else if (strcmp(cmdtyped, "mkdir")) {
             mkdir(command);
@@ -81,6 +81,9 @@ int main(void) {
             puts(cmdtyped, 0x07);
             puts(": command not found\n", 0x07);
         }
+        int cur_cluster = 2;
+        syscall(19,(uint32_t)&cur_cluster,0,0);
+        syscall(18,(uint32_t)cur_cluster,(uint32_t)"",(uint32_t)true);
     }
 
     return 0;

@@ -1,6 +1,6 @@
 #include "header/command-shell/command-shell.h"
 
-int8_t copy_status = 0;  // 0 for success, 1 for failure
+static int8_t copy_status = 0;  // 0 for success, 1 for failure
 
 void syscall(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx) {
     __asm__ volatile("mov %0, %%ebx" : /* <Empty> */ : "r"(ebx));
@@ -504,14 +504,10 @@ int getLastCluster(char* path){
             .parent_cluster_number = last_cluster,
             .buffer_size = 0,
         };
-        puts_integer(last_cluster);
-        puts("\n",0xF);
         memcpy(request.name, dir, 8);
         syscall(11,(uint32_t)&request,(uint32_t)&last_cluster,0);
         getDir(path,dir,'/',&lastIdx);
     }
-    puts_integer(last_cluster);
-    puts("\n",0xF);
     return last_cluster;
 }
 
@@ -549,6 +545,7 @@ void mv(char* command) {
 
     if (copy_status == 0) {  // '0' is success
         remove(source_name, source_ext,cur_cluster);
+
         puts("Move successful.\n", 0x07);
     } else {
         puts("Move failed: unable to verify copy.\n", 0x07);
@@ -830,4 +827,59 @@ void kill(char* command){
     }
     puts("Error: ",0x04);
     puts("No such Process with Match PID\n\n",0x07);
+}
+
+int findFileFolder(char name[8],char ext[3]){
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
+    for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
+    {   
+        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
+            continue;
+        }
+        if (memcmp(cwd.table[i].name, name, 8) == 0 && memcmp(cwd.table[i].ext, ext, 3) == 0)
+        {
+            return i;
+        }
+    }
+    return -9999;
+}
+
+void copyPath(char* command){
+    uint16_t n_words = countWords(command);
+    if (n_words != 3) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nmv <source> <destination>\n", 0x07);
+        return;
+    }
+
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
+
+    char source_filename[12],pathDest[100];
+    getWord(command, 1, source_filename);
+    getWord(command, 2, pathDest);
+
+    char source_name[9], source_ext[4];
+
+    if (parseFileName(source_filename, source_name, source_ext)) {
+        puts("Error: ",0x04);
+        puts(source_filename, 0x07);
+        puts(": Invalid source file name or extension.\n", 0x07);
+        return;
+    }
+    int dest_cluster = getLastCluster(pathDest);
+    if(dest_cluster==9999){
+        puts("Error: ",0x04);
+        puts(source_filename, 0x07);
+        puts("Invalid Destination Path.\n", 0x07);
+    }
+    
+    copy(source_name, source_ext, cur_cluster, source_name, source_ext, dest_cluster);
+
+    if (copy_status == 0) {  // '0' is success
+        puts("Copy successful.\n", 0x07);
+    } else {
+        puts("Copy failed: unable to verify copy.\n", 0x07);
+    }
 }
