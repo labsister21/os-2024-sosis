@@ -39,4 +39,6 @@ void kill(char* command);
 
 void copyPath(char* command);
 
+void mvPath(char* command);
+
 #endif

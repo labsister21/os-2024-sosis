@@ -488,7 +488,7 @@ int countPath(char* path){
     return count+1;
 }
 
-int getLastCluster(char* path){
+int getLastCluster(char* path,int isUpdate){
     int last_cluster;
     int lastIdx = 0,nPath = countPath(path);
     char dir[8];
@@ -506,6 +506,9 @@ int getLastCluster(char* path){
         };
         memcpy(request.name, dir, 8);
         syscall(11,(uint32_t)&request,(uint32_t)&last_cluster,0);
+        if(isUpdate==1 && last_cluster!=9999){
+            syscall(18,(uint32_t)last_cluster,(uint32_t)dir,(uint32_t)true);
+        }
         getDir(path,dir,'/',&lastIdx);
     }
     return last_cluster;
@@ -534,7 +537,7 @@ void mv(char* command) {
         puts(": Invalid source file name or extension.\n", 0x07);
         return;
     }
-    int dest_cluster = getLastCluster(pathDest);
+    int dest_cluster = getLastCluster(pathDest,false);
     if(dest_cluster==9999){
         puts("Error: ",0x04);
         puts(source_filename, 0x07);
@@ -551,6 +554,92 @@ void mv(char* command) {
         puts("Move failed: unable to verify copy.\n", 0x07);
     }
 }
+
+int findFileFolder(char name[8],char ext[3]){
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
+    for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
+    {   
+        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
+            continue;
+        }
+        if (memcmp(cwd.table[i].name, name, 8) == 0 && memcmp(cwd.table[i].ext, ext, 3) == 0)
+        {
+            return i;
+        }
+    }
+    return -9999;
+}
+
+void traverseFolder(int cluster, int destination,int isDelete){
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(12,(uint32_t)&cwd,cluster,0);
+    for(int i=2;i<64;i++){
+        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
+            continue;
+        }
+        struct FAT32DirectoryEntry entry = cwd.table[i];
+        if(cwd.table[i].attribute==ATTR_SUBDIRECTORY){
+            traverseFolder((cwd.table[i].cluster_high<<16)|(cwd.table[i].cluster_low),destination,isDelete);
+        }else{
+            copy(entry.name,entry.ext,cluster,entry.name,entry.ext,destination);
+            if(isDelete==1){
+                remove(entry.name, entry.ext,cluster);
+            }
+        }
+    }
+}
+
+void mvPath(char* command){
+    uint16_t n_words = countWords(command);
+    if (n_words != 3) {
+        puts("Error: ",0x04);
+        puts("Invalid syntax\nmv <source> <destination>\n", 0x07);
+        return;
+    }
+
+    int cur_cluster = 2;
+    syscall(19,(uint32_t)&cur_cluster,0,0);
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
+
+    char source_filename[12],pathDest[100];
+    getWord(command, 1, source_filename);
+    getWord(command, 2, pathDest);
+
+    char source_name[9], source_ext[4];
+
+    if (parseFileName(source_filename, source_name, source_ext)) {
+        puts("Error: ",0x04);
+        puts(source_filename, 0x07);
+        puts(": Invalid source file name or extension.\n", 0x07);
+        return;
+    }
+    int dest_cluster = getLastCluster(pathDest,0);
+    if(dest_cluster==9999){
+        puts("Error: ",0x04);
+        puts(source_filename, 0x07);
+        puts("Invalid Destination Path.\n", 0x07);
+    }
+
+    int idx = findFileFolder(source_name,source_ext);
+    if(idx==-9999){
+        puts("Error: No such file/folder in this directory",0xF);
+    }
+    if(cwd.table[idx].attribute!=ATTR_SUBDIRECTORY){
+        copy(source_name, source_ext, cur_cluster, source_name, source_ext, dest_cluster);
+        remove(source_name, source_ext,cur_cluster);
+    }else{
+        int clusterFolder = (cwd.table[idx].cluster_high<<16)|(cwd.table[idx].cluster_low);
+        traverseFolder(clusterFolder,dest_cluster,1);
+    }
+    if (copy_status == 0) {  // '0' is success
+        puts("Copy successful.\n", 0x07);
+    } else {
+        puts("Copy failed: unable to verify copy.\n", 0x07);
+    }
+}
+
 
 void ls() {
     puts("name    ext type   size\n",0xF);
@@ -621,7 +710,7 @@ void cd(char *command){
         puts("Invalid syntax\ncd <dir_name>\n", 0x07);
         return;
     }
-    char name[8],ext[3],path[11]="";
+    char path[100]="";
     getWord(command,1,path);
 
     int cur_cluster = 2;
@@ -644,30 +733,10 @@ void cd(char *command){
         return;
     }
 
-    parseFileName(path,name,ext);
-    struct FAT32DirectoryTable table_buf = {0};
-    struct FAT32DriverRequest request = {
-        .buf = &table_buf,
-        .name = "\0\0\0\0\0\0\0",
-        .ext = "\0\0",
-        .parent_cluster_number = cur_cluster,
-        .buffer_size = sizeof(struct FAT32DirectoryTable)
-    };
-    memcpy(request.name, name, 8);
-    memcpy(request.ext, ext, 3);
-
-    int retcode;
-    syscall(1,(uint32_t)&request,(uint32_t)&retcode,0);
-    if(retcode==2){
+    int idx = getLastCluster(path,true);
+    if(idx==9999){
         puts("Error: ",0x04);
-        puts("Directory Not Found!\n",0xF);
-    }else if(retcode==1){
-        puts("Error: ",0x04);
-        puts("Input is not a Directory\n",0xF);
-    }else{
-        int32_t cluster_cd;
-        syscall(11,(uint32_t)&request,(uint32_t)&cluster_cd,0);
-        syscall(18,(uint32_t)cluster_cd,(uint32_t)path,true);
+        puts("Path not valid",0x07);
     }
 }
 
@@ -829,32 +898,18 @@ void kill(char* command){
     puts("No such Process with Match PID\n\n",0x07);
 }
 
-int findFileFolder(char name[8],char ext[3]){
-    struct FAT32DirectoryTable cwd = {0};
-    syscall(22,(uint32_t)&cwd,0,0);
-    for (int i=2;i < (int)(CLUSTER_SIZE / sizeof(struct FAT32DirectoryEntry));i++)
-    {   
-        if(cwd.table[i].user_attribute!=UATTR_NOT_EMPTY){
-            continue;
-        }
-        if (memcmp(cwd.table[i].name, name, 8) == 0 && memcmp(cwd.table[i].ext, ext, 3) == 0)
-        {
-            return i;
-        }
-    }
-    return -9999;
-}
-
 void copyPath(char* command){
     uint16_t n_words = countWords(command);
     if (n_words != 3) {
         puts("Error: ",0x04);
-        puts("Invalid syntax\nmv <source> <destination>\n", 0x07);
+        puts("Invalid syntax\ncp <source> <destination>\n", 0x07);
         return;
     }
 
     int cur_cluster = 2;
     syscall(19,(uint32_t)&cur_cluster,0,0);
+    struct FAT32DirectoryTable cwd = {0};
+    syscall(22,(uint32_t)&cwd,0,0);
 
     char source_filename[12],pathDest[100];
     getWord(command, 1, source_filename);
@@ -868,15 +923,24 @@ void copyPath(char* command){
         puts(": Invalid source file name or extension.\n", 0x07);
         return;
     }
-    int dest_cluster = getLastCluster(pathDest);
+    int dest_cluster = getLastCluster(pathDest,false);
     if(dest_cluster==9999){
         puts("Error: ",0x04);
         puts(source_filename, 0x07);
         puts("Invalid Destination Path.\n", 0x07);
     }
-    
-    copy(source_name, source_ext, cur_cluster, source_name, source_ext, dest_cluster);
 
+    int idx = findFileFolder(source_name,source_ext);
+    if(idx==-9999){
+        puts("Error: No such file/folder in this directory",0xF);
+    }
+    if(cwd.table[idx].attribute!=ATTR_SUBDIRECTORY){
+        copy(source_name, source_ext, cur_cluster, source_name, source_ext, dest_cluster);
+    }else{
+        int clusterFolder = (cwd.table[idx].cluster_high<<16)|(cwd.table[idx].cluster_low);
+        // puts_integer(clusterFolder);
+        traverseFolder(clusterFolder,dest_cluster,0);
+    }
     if (copy_status == 0) {  // '0' is success
         puts("Copy successful.\n", 0x07);
     } else {

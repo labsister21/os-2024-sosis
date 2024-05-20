@@ -48,7 +48,7 @@ int main(void) {
             mkdir(command);
         }
         else if (strcmp(cmdtyped, "mv")) {
-            mv(command);
+            mvPath(command);
         }
         else if (strcmp(cmdtyped,"find")) {
             findShell(command);
