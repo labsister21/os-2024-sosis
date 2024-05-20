@@ -131,10 +131,6 @@ void keyboard_isr(void) {
     uint8_t scancode = in(KEYBOARD_DATA_PORT);
     char ascii_char;
     if (keyboard_state.keyboard_input_on) {
-        bool is_break_code = (scancode & 0x80) != 0;
-        if (is_break_code) {
-            return;
-        }
 
         if (scancode == CAPSLOCK_SCANCODE) {
             keyboard_state.capslock_on = !keyboard_state.capslock_on;
